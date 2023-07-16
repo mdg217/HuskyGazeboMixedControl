@@ -11,7 +11,9 @@ rospy.init_node('husky', anonymous=True)
 pub = rospy.Publisher('/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
 
 # Create an instance of the MPC_model class
-mpc_model = MPC_model(-3, 0)
+xd = [5, 3, 4]
+yd = [5, 2, 4]
+mpc_model = MPC_model(xd[0], yd[0]) #Reference Positioning
 mpc = mpc_model.getModel()
 
 # Create a Twist message for robot motion
@@ -31,6 +33,7 @@ pose = tf.TransformListener()
 u0 = np.array([0, 0]).reshape(2, 1)
 
 # Main ROS loop
+i = 0
 while not rospy.is_shutdown():
 
     try:

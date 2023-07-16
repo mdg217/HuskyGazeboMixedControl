@@ -15,24 +15,24 @@ import numpy as np
 
 class MPC_model():
     
-    def init(self, xd, yd):
+    def __init__(self, xd, yd):
         # do-mpc implementation
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
 
         # Define state variables
-        x = self.model.set_variable(var_type='_x', var_name='x', shape=(1, 1))
-        y = self.model.set_variable(var_type='_x', var_name='y', shape=(1, 1))
-        theta = self.model.set_variable(var_type='_x', var_name='theta', shape=(1, 1))
+        self.x = self.model.set_variable(var_type='_x', var_name='x', shape=(1, 1))
+        self.y = self.model.set_variable(var_type='_x', var_name='y', shape=(1, 1))
+        self.theta = self.model.set_variable(var_type='_x', var_name='theta', shape=(1, 1))
 
         # Define control variables
-        v = self.model.set_variable(var_type='_u', var_name='v')
-        w = self.model.set_variable(var_type='_u', var_name='w')
+        self.v = self.model.set_variable(var_type='_u', var_name='v')
+        self.w = self.model.set_variable(var_type='_u', var_name='w')
 
         # Define state equations
-        self.model.set_rhs('x', v * np.cos(theta))
-        self.model.set_rhs('y', v * np.sin(theta))
-        self.model.set_rhs('theta', w)
+        self.model.set_rhs('x', self.v * np.cos(self.theta))
+        self.model.set_rhs('y', self.v * np.sin(self.theta))
+        self.model.set_rhs('theta', self.w)
         self.model.setup()
 
         setup_mpc = {
@@ -45,14 +45,7 @@ class MPC_model():
         self.mpc.set_param(**setup_mpc)
 
         # Set reference points for state variables
-        self.xd = xd
-        self.yd = yd
-
-        # Define cost functions
-        mterm = (x - self.xd)**2 + (y - self.yd)**2  # + 0.01 * (theta)**2  # lyapunov
-        lterm = (x - self.xd)**2 + (y - self.yd)**2 + 1/2 * v**2 + 1/2 * w**2
-
-        self.mpc.set_objective(mterm=mterm, lterm=lterm)
+        self.costFunction(xd, yd)
         
         # Set lower bounds on states
         #self.mpc.bounds['lower', '_x', 'x'] = 0
@@ -81,6 +74,16 @@ class MPC_model():
         simulator.x0 = x0
         self.mpc.x0 = x0
         self.mpc.set_initial_guess()
+
+    # Method to define the cost function
+    def costFunction(self, xd, yd):
+        mterm = (self.x - xd)**2 + (self.y - yd)**2  # + 0.01 * (theta)**2  # lyapunov
+        lterm = (self.x - xd)**2 + (self.y -  yd)**2 + 1/2 * self.v**2 + 1/2 * self.w**2
+        self.mpc.set_objective(mterm=mterm, lterm=lterm)
+
+    # Perform another target point
+    def sendTargetPoint(self, xd, yd):
+        pass
 
     # Method to return the initialized MPC model
     def getModel(self):

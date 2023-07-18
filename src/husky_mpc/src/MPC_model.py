@@ -15,7 +15,7 @@ import numpy as np
 
 class MPC_model():
     
-    def __init__(self, xd, yd):
+    def __init__(self, xd, yd, init_state):
         # do-mpc implementation
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
@@ -69,7 +69,7 @@ class MPC_model():
         simulator.setup()
         
         # Set initial state for simulations
-        x0 = np.array([0, 0, 0]).reshape(-1, 1)
+        x0 = np.array(init_state).reshape(-1, 1)
         print(x0)
         simulator.x0 = x0
         self.mpc.x0 = x0
@@ -80,10 +80,6 @@ class MPC_model():
         mterm = (self.x - xd)**2 + (self.y - yd)**2  # + 0.01 * (theta)**2  # lyapunov
         lterm = (self.x - xd)**2 + (self.y -  yd)**2 + 1/2 * self.v**2 + 1/2 * self.w**2
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
-
-    # Perform another target point
-    def sendTargetPoint(self, xd, yd):
-        pass
 
     # Method to return the initialized MPC model
     def getModel(self):

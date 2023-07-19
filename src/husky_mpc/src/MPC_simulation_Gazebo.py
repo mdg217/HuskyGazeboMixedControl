@@ -1,15 +1,14 @@
 # Import ros package:
 import rospy
 from geometry_msgs.msg import Twist
-from nav_msgs.msg import Odometry
-import tf2_ros
 import tf
+import tf2_ros
 from tf import transformations as t
 from MPC_model import *
 import numpy as np
 from gazebo_msgs.srv import GetLinkState 
-from gazebo_msgs.msg import geometry_msgs
-import time
+import geometry_msgs.msg
+import tf_conversions
 
 
 def get_link_states(link_name, reference_frame):
@@ -20,6 +19,32 @@ def get_link_states(link_name, reference_frame):
         return state
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
+
+def publish_tf(translation, rotation):
+    br = tf2_ros.TransformBroadcaster()
+
+    t = geometry_msgs.msg.TransformStamped()
+
+    t.header.stamp = rospy.Time.now()
+    t.header.frame_id = "odom"
+    t.child_frame_id = "base_link_gazebo"
+    t.transform.translation.x = translation[0]
+    t.transform.translation.y = translation[1]
+    t.transform.translation.z = 0.0
+    t.transform.rotation.x = rotation[0]
+    t.transform.rotation.y = rotation[1]
+    t.transform.rotation.z = rotation[2]
+    t.transform.rotation.w = rotation[3]
+
+    br.sendTransform(t) 
+
+
+def add_noise_to_states(states):
+    noise_xy = 0*np.random.normal(0,1,1)
+    noise_theta = 0*np.random.normal(0,1,1)
+
+    return [states[0] * noise_xy, states[1] * noise_xy, states[2] * noise_theta]
+
 
 # Function to print the robot's current state
 def print_states(x, y, z):
@@ -56,10 +81,10 @@ i = 1
 while not rospy.is_shutdown():
     new_pose = get_link_states('husky::base_link', 'world') 
     new_T_O_W = t.concatenate_matrices(t.translation_matrix([new_pose.link_state.pose.position.x, new_pose.link_state.pose.position.y, new_pose.link_state.pose.position.z]),
-                                t.quaternion_matrix([new_pose.link_state.pose.orientation.x, new_pose.link_state.pose.orientation.y, new_pose.link_state.pose.orientation.z, new_pose.link_state.pose.orientation.w]))
+                t.quaternion_matrix([new_pose.link_state.pose.orientation.x, new_pose.link_state.pose.orientation.y, new_pose.link_state.pose.orientation.z, new_pose.link_state.pose.orientation.w]))
 
     new_real_pose = np.dot(t.inverse_matrix(T_O_W),new_T_O_W)
-    print(new_real_pose)
+
 
     trans = tf.transformations.translation_from_matrix(new_real_pose)
     rot = tf.transformations.quaternion_from_matrix(new_real_pose)
@@ -68,13 +93,16 @@ while not rospy.is_shutdown():
     states = numpy.array([trans[0], trans[1], rot[2]]).reshape(-1, 1)
     print_states(trans[0], trans[1], rot[2])
 
+    publish_tf(trans, rot)
+
+    states_noise = np.array(add_noise_to_states(states)).reshape(-1,1)
+
     # Perform MPC step to get the control input
-    u0 = mpc.make_step(states)
+    u0 = mpc.make_step(states_noise)
 
     # Set the linear and angular velocities for the robot's motion
     move_cmd.linear.x = u0[0]
     move_cmd.angular.z = u0[1]
-    print(u0[0])
 
     # Publish the motion command
     pub.publish(move_cmd)

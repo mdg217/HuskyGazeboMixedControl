@@ -20,7 +20,7 @@ class MPC_model():
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
 
-        # Define state variables
+        # Define state variables adding noise
         self.x = self.model.set_variable(var_type='_x', var_name='x', shape=(1, 1))
         self.y = self.model.set_variable(var_type='_x', var_name='y', shape=(1, 1))
         self.theta = self.model.set_variable(var_type='_x', var_name='theta', shape=(1, 1))

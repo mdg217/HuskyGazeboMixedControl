@@ -8,7 +8,6 @@ from MPC_model import *
 import numpy as np
 from gazebo_msgs.srv import GetLinkState 
 import geometry_msgs.msg
-import tf_conversions
 
 
 def get_link_states(link_name, reference_frame):
@@ -43,7 +42,7 @@ def add_noise_to_states(states):
     noise_xy = 0*np.random.normal(0,1,1)
     noise_theta = 0*np.random.normal(0,1,1)
 
-    return [states[0] * noise_xy, states[1] * noise_xy, states[2] * noise_theta]
+    return [states[0] + noise_xy, states[1] + noise_xy, states[2] + noise_theta]
 
 
 # Function to print the robot's current state
@@ -64,11 +63,9 @@ T_odom_world = get_link_states('husky::base_link', 'world') #its the same as T_b
 T_O_W = t.concatenate_matrices(t.translation_matrix([T_odom_world.link_state.pose.position.x, T_odom_world.link_state.pose.position.y, T_odom_world.link_state.pose.position.z]),
                                t.quaternion_matrix([T_odom_world.link_state.pose.orientation.x, T_odom_world.link_state.pose.orientation.y, T_odom_world.link_state.pose.orientation.z, T_odom_world.link_state.pose.orientation.w]))
 
-print(T_O_W)
-
 # Create an instance of the MPC_model class
-xd = [14]
-yd = [14]
+xd = [5]
+yd = [7]
 
 mpc_model = MPC_model(xd[0], yd[0], init_state=[0, 0, 0]) #Reference Positioning
 mpc = mpc_model.getModel()
@@ -76,7 +73,6 @@ mpc = mpc_model.getModel()
 # Initial control input
 u0 = np.array([0, 0]).reshape(2, 1)
 
-i = 1
 # Main ROS loop
 while not rospy.is_shutdown():
     new_pose = get_link_states('husky::base_link', 'world') 

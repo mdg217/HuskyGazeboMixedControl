@@ -1,4 +1,4 @@
-import math
+import numpy as np
 
 class ObstacleCircle:
 
@@ -8,7 +8,7 @@ class ObstacleCircle:
         self.r  = r
 
     def distance(self, x2, y2):
-        return math.sqrt((x2 - self.xc)**2 + (y2 - self.yc)**2)
+        return np.sqrt((x2 - self.xc)**2 + (y2 - self.yc)**2)
 
     def intersection(self, center2_x, center2_y, radius2):
         # Calcola la distanza tra i centri delle due circonferenze

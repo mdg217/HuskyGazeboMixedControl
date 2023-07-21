@@ -13,17 +13,35 @@ import do_mpc
 from casadi import *
 import numpy as np
 from CostCache import *
+from ObstacleCircle import *
 
 class MPC_model():
     
     def tvp_fun(self, t_now):
-        
-        self.tvp_template['_tvp', self.cache.get_time(), 'obs'] = self.cache.get_cost()
+
+        for k in range(self.n_horizon+1):
+            obs = self.cache.get_cost()
+
+            Rat = np.sqrt((self.x - self.xd)**2 + (self.y - self.yd)**2)
+            Rrep = np.sqrt((self.x - obs[0])**2 + (self.y - obs[1])**2) - obs[2]
+            print(Rrep)
+            obs_a = (Rat/(Rrep**2 + 0.1))
+            obs_b = (Rat/(Rrep**2 + 0.1))
+
+            self.tvp_template['_tvp', k, 'obs'] = obs_a + obs_b
+
+            print("Valore dello stato temp: " + str(self.model.tvp['obs']))
+            print("Valore dato: " + str(self.tvp_template['_tvp', k, 'obs']))
         return self.tvp_template
 
     def __init__(self, xd, yd, init_state):
         # do-mpc implementation
         model_type = 'continuous'  # either 'discrete' or 'continuous'
+
+        self.n_horizon = 20
+        self.xd = xd
+        self.yd = yd
+
         self.model = do_mpc.model.Model(model_type)
         self.cache = CostCache()
 
@@ -46,17 +64,23 @@ class MPC_model():
         self.model.setup()
 
         setup_mpc = {
-            'n_horizon': 20,
+            'n_horizon': self.n_horizon,
             't_step': 0.1,
             'n_robust': 1,
             'store_full_solution': True,
         }
+
+        #self.mpc.supress_ipopt_output()
         self.mpc = do_mpc.controller.MPC(self.model)
         self.mpc.set_param(**setup_mpc)
 
         # Set reference points for state variables
-        mterm = (self.x - xd)**2 + 0.9*(self.y - yd)**2 #+ self.obs# + 0.01 * (theta)**2  # lyapunov
-        lterm = (self.x - xd)**2 + 0.9*(self.y - yd)**2 + 1/2*self.v**2 + 1/2*self.w**2 #+ self.obs
+
+        E = [self.x - xd ,self.y - yd, 0]
+        Q = [[1/(self.x - xd)**2 * self.model.tvp['obs'], 0, 0],[0, 1/(self.y - yd)**2 * self.model.tvp['obs'], 0],[0, 0, 0]]
+
+        mterm = (E[0])**2 + (E[1])**2 * np.dot(np.dot(np.transpose(E), Q), E)
+        lterm = mterm + 1/2*self.v**2 + 1/2*self.w**2 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
 
         self.tvp_template = self.mpc.get_tvp_template()
@@ -77,17 +101,9 @@ class MPC_model():
         self.mpc.bounds['upper', '_u', 'w'] = 1
 
         self.mpc.setup()
-
-        # Initialize simulator for model simulations
-        simulator = do_mpc.simulator.Simulator(self.model)
-        simulator.set_param(t_step=0.1)
-        simulator.set_tvp_fun(self.tvp_fun)
-        simulator.setup()
         
         # Set initial state for simulations
         x0 = np.array(init_state).reshape(-1, 1)
-        print(x0)
-        simulator.x0 = x0
         self.mpc.x0 = x0
         self.mpc.set_initial_guess()
         

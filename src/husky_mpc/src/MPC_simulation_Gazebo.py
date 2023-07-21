@@ -18,7 +18,7 @@ visionfield_radius = 1.5
 
 x_offset = 7
 y_offset = 7
-obs1 = ObstacleCircle((-4.60951+x_offset), (-3.97645+x_offset), 0.831860)
+obs1 = ObstacleCircle((-4.60951+x_offset), (-3.97645+x_offset), 1.8)
 
 
 # Initialize ROS node
@@ -58,7 +58,10 @@ while not rospy.is_shutdown():
     rot = tf.transformations.quaternion_from_matrix(new_real_pose)
 
     if obs1.intersection(trans[0], trans[1], visionfield_radius):
-        cache.set_cost(10000*max(0, obs1.r - obs1.distance(trans[0], trans[1])), time)
+        print("Ho identificato l'oggetto")
+        cache.set_cost([obs1.xc, obs1.yc, obs1.r])
+    else:
+        cache.set_cost([0, 0, 0])
 
     # Get the robot's current states (position and orientation)
     states = numpy.array([trans[0], trans[1], rot[2]]).reshape(-1, 1)
@@ -70,6 +73,7 @@ while not rospy.is_shutdown():
 
     # Perform MPC step to get the control input
     u0 = mpc.make_step(states_noise)
+    print(u0)
 
     # Set the linear and angular velocities for the robot's motion
     move_cmd.linear.x = u0[0]

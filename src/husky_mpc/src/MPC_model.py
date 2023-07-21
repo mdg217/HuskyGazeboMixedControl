@@ -20,7 +20,10 @@ class MPC_model():
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
 
-        # Define state variables adding noise
+        # Define obstacle cost time-variing variable
+        self.obs = self.model.set_variable(var_type='_tvp', var_name='obs')
+
+        # Define state variables 
         self.x = self.model.set_variable(var_type='_x', var_name='x', shape=(1, 1))
         self.y = self.model.set_variable(var_type='_x', var_name='y', shape=(1, 1))
         self.theta = self.model.set_variable(var_type='_x', var_name='theta', shape=(1, 1))
@@ -77,9 +80,14 @@ class MPC_model():
 
     # Method to define the cost function
     def costFunction(self, xd, yd):
-        mterm = (self.x - xd)**2 + (self.y - yd)**2  # + 0.01 * (theta)**2  # lyapunov
-        lterm = (self.x - xd)**2 + (self.y -  yd)**2 + 1/2 * self.v**2 + 1/2 * self.w**2
+        mterm = (self.x - xd)**2 + 0.1*(self.y - yd)**2 + self.obs# + 0.01 * (theta)**2  # lyapunov
+        lterm = (self.x - xd)**2 + 0.1*(self.y -  yd)**2 + 1/2 * self.v**2 + 1/2 * self.w**2 + self.obs
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
+
+        self.mpc.set_tvp_fun(self.obs)
+
+    def setObstacleValue(self, obs):
+        self.obs = 10000*(self.x - obs[0])**2 + 10000*(self.y - obs[1])**2
 
     # Method to return the initialized MPC model
     def getModel(self):

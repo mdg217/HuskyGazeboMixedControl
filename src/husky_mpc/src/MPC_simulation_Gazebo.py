@@ -10,8 +10,10 @@ from gazebo_msgs.srv import GetLinkState
 import geometry_msgs.msg
 from utility import *
 from ObstacleCircle import *
+from CostCache import *
 
 
+cache = CostCache()
 visionfield_radius = 1.5
 
 x_offset = 7
@@ -44,6 +46,8 @@ mpc = mpc_model.getModel()
 u0 = np.array([0, 0]).reshape(2, 1)
 
 # Main ROS loop
+time = 0
+
 while not rospy.is_shutdown():
     new_pose = get_link_states('husky::base_link', 'world') 
     new_T_O_W = t.concatenate_matrices(t.translation_matrix([new_pose.link_state.pose.position.x, new_pose.link_state.pose.position.y, new_pose.link_state.pose.position.z]),
@@ -54,8 +58,8 @@ while not rospy.is_shutdown():
     rot = tf.transformations.quaternion_from_matrix(new_real_pose)
 
     if obs1.intersection(trans[0], trans[1], visionfield_radius):
-        mpc_model.setObstacleValue(([obs1.xc, obs1.yc]))
-    
+        cache.set_cost(10000*max(0, obs1.r - obs1.distance(trans[0], trans[1])), time)
+
     # Get the robot's current states (position and orientation)
     states = numpy.array([trans[0], trans[1], rot[2]]).reshape(-1, 1)
     print_states(trans[0], trans[1], rot[2])
@@ -76,3 +80,4 @@ while not rospy.is_shutdown():
 
     # Sleep according to the defined rate
     rate.sleep()
+    time+=1

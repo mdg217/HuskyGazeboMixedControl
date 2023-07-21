@@ -12,13 +12,20 @@ to return the initialized MPC model.
 import do_mpc
 from casadi import *
 import numpy as np
+from CostCache import *
 
 class MPC_model():
     
+    def tvp_fun(self, t_now):
+        
+        self.tvp_template['_tvp', self.cache.get_time(), 'obs'] = self.cache.get_cost()
+        return self.tvp_template
+
     def __init__(self, xd, yd, init_state):
         # do-mpc implementation
         model_type = 'continuous'  # either 'discrete' or 'continuous'
         self.model = do_mpc.model.Model(model_type)
+        self.cache = CostCache()
 
         # Define obstacle cost time-variing variable
         self.obs = self.model.set_variable(var_type='_tvp', var_name='obs')
@@ -48,8 +55,13 @@ class MPC_model():
         self.mpc.set_param(**setup_mpc)
 
         # Set reference points for state variables
-        self.costFunction(xd, yd)
-        
+        mterm = (self.x - xd)**2 + 0.9*(self.y - yd)**2 #+ self.obs# + 0.01 * (theta)**2  # lyapunov
+        lterm = (self.x - xd)**2 + 0.9*(self.y - yd)**2 + 1/2*self.v**2 + 1/2*self.w**2 #+ self.obs
+        self.mpc.set_objective(mterm=mterm, lterm=lterm)
+
+        self.tvp_template = self.mpc.get_tvp_template()
+        self.mpc.set_tvp_fun(self.tvp_fun)
+
         # Set lower bounds on states
         #self.mpc.bounds['lower', '_x', 'x'] = 0
         #self.mpc.bounds['lower', '_x', 'y'] = 0
@@ -69,6 +81,7 @@ class MPC_model():
         # Initialize simulator for model simulations
         simulator = do_mpc.simulator.Simulator(self.model)
         simulator.set_param(t_step=0.1)
+        simulator.set_tvp_fun(self.tvp_fun)
         simulator.setup()
         
         # Set initial state for simulations
@@ -77,17 +90,7 @@ class MPC_model():
         simulator.x0 = x0
         self.mpc.x0 = x0
         self.mpc.set_initial_guess()
-
-    # Method to define the cost function
-    def costFunction(self, xd, yd):
-        mterm = (self.x - xd)**2 + 0.1*(self.y - yd)**2 + self.obs# + 0.01 * (theta)**2  # lyapunov
-        lterm = (self.x - xd)**2 + 0.1*(self.y -  yd)**2 + 1/2 * self.v**2 + 1/2 * self.w**2 + self.obs
-        self.mpc.set_objective(mterm=mterm, lterm=lterm)
-
-        self.mpc.set_tvp_fun(self.obs)
-
-    def setObstacleValue(self, obs):
-        self.obs = 10000*(self.x - obs[0])**2 + 10000*(self.y - obs[1])**2
+        
 
     # Method to return the initialized MPC model
     def getModel(self):

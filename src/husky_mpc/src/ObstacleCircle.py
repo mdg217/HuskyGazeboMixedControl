@@ -27,14 +27,4 @@ class ObstacleCircle:
         # In tutti gli altri casi, le due circonferenze si intersecano
         return True
 
-    def cost(self, x_attuale, y_attuale):
-        d = self.distance(x_attuale, y_attuale, self.xc, self.yc)
-
-        if d < self.r:
-            # La posizione attuale è all'interno del cerchio, impostiamo un valore di costo positivo
-            valore_costo = 1.0  # Puoi personalizzare questo valore come ritieni opportuno
-        else:
-            # La posizione attuale è all'esterno del cerchio, impostiamo un valore di costo nullo
-            valore_costo = 0.0
-
-        return valore_costo
+    

@@ -10,6 +10,7 @@ class CostCache:
     def init_cache(self):
         # Inizializzazione del cache, se necessario
         self.cost = [0, 0, 0]
+        self.ind = 0
 
     def get_cost(self):
         # Ottiene il costo dalla cache
@@ -18,4 +19,10 @@ class CostCache:
     def set_cost(self, cost):
         # Imposta il costo nella cache
         self.cost = cost
+
+    def set_indicator(self, value):
+        self.ind = value
+
+    def indicator(self):
+        return self.ind
 

@@ -22,16 +22,11 @@ class MPC_model():
         for k in range(self.n_horizon+1):
             obs = self.cache.get_cost()
 
-            Rat = np.sqrt((self.x - self.xd)**2 + (self.y - self.yd)**2)
-            Rrep = np.sqrt((self.x - obs[0])**2 + (self.y - obs[1])**2) - obs[2]
-            print(Rrep)
-            obs_a = (Rat/(Rrep**2 + 0.1))
-            obs_b = (Rat/(Rrep**2 + 0.1))
+            self.tvp_template['_tvp', k, 'obsx'] = obs[0]
+            self.tvp_template['_tvp', k, 'obsy'] = obs[1]
+            self.tvp_template['_tvp', k, 'r'] = obs[2]
+            self.tvp_template['_tvp', k, 'ind'] = self.cache.indicator()
 
-            self.tvp_template['_tvp', k, 'obs'] = obs_a + obs_b
-
-            print("Valore dello stato temp: " + str(self.model.tvp['obs']))
-            print("Valore dato: " + str(self.tvp_template['_tvp', k, 'obs']))
         return self.tvp_template
 
     def __init__(self, xd, yd, init_state):
@@ -46,7 +41,10 @@ class MPC_model():
         self.cache = CostCache()
 
         # Define obstacle cost time-variing variable
-        self.obs = self.model.set_variable(var_type='_tvp', var_name='obs')
+        self.obsx = self.model.set_variable(var_type='_tvp', var_name='obsx')
+        self.obsy = self.model.set_variable(var_type='_tvp', var_name='obsy')
+        self.r = self.model.set_variable(var_type='_tvp', var_name='r')
+        self.ind = self.model.set_variable(var_type='_tvp', var_name='ind')
 
         # Define state variables 
         self.x = self.model.set_variable(var_type='_x', var_name='x', shape=(1, 1))
@@ -76,10 +74,9 @@ class MPC_model():
 
         # Set reference points for state variables
 
-        E = [self.x - xd ,self.y - yd, 0]
-        Q = [[1/(self.x - xd)**2 * self.model.tvp['obs'], 0, 0],[0, 1/(self.y - yd)**2 * self.model.tvp['obs'], 0],[0, 0, 0]]
-
-        mterm = (E[0])**2 + (E[1])**2 * np.dot(np.dot(np.transpose(E), Q), E)
+        dmax = 1.5 # field of view (FOV)
+        oterm = (np.log((np.sqrt((self.x + 1.5 - self.obsx + self.r)**2 + (self.y + 1.5 - self.obsy + self.r)**2)/dmax)))
+        mterm = (self.x - self.xd)**2 + (self.y - self.yd)**2 + self.ind*10*oterm
         lterm = mterm + 1/2*self.v**2 + 1/2*self.w**2 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
 

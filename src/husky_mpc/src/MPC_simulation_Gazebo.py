@@ -14,15 +14,13 @@ from CostCache import *
 
 
 cache = CostCache()
-visionfield_radius = 1.5
+visionfield_radius = 1
 
 T_odom_world = get_link_states('husky::base_link', 'world') #its the same as T_baselink_world
 T_O_W = t.concatenate_matrices(t.translation_matrix([T_odom_world.link_state.pose.position.x, T_odom_world.link_state.pose.position.y, T_odom_world.link_state.pose.position.z]),
                                t.quaternion_matrix([T_odom_world.link_state.pose.orientation.x, T_odom_world.link_state.pose.orientation.y, T_odom_world.link_state.pose.orientation.z, T_odom_world.link_state.pose.orientation.w]))
 
-obs1 = ObstacleCircle((-4.60951), (-3.97645) ,1.66372 , 0.83186, T_O_W)
-obs2 = ObstacleCircle((-3.20305), (4.12057) ,1.66372 , 0.83186, T_O_W)
-
+cache.set_T(T_O_W)
 
 # Initialize ROS node
 rospy.init_node('husky', anonymous=True)
@@ -35,8 +33,8 @@ move_cmd = Twist()
 rate = rospy.Rate(10)
 
 # Create an instance of the MPC_model class
-xd = [8]
-yd = [12]
+xd = [14]
+yd = [14]
 
 mpc_model = MPC_model(xd[0], yd[0], init_state=[0, 0, 0]) #Reference Positioning
 mpc = mpc_model.getModel()
@@ -56,19 +54,6 @@ while not rospy.is_shutdown():
     trans = tf.transformations.translation_from_matrix(new_real_pose)
     rot = tf.transformations.quaternion_from_matrix(new_real_pose)
     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(rot)
-
-    if obs1.are_circles_touching(trans[0], trans[1], visionfield_radius):
-        cache.set_cost([obs1.xc, obs1.yc, obs1.r])
-        print("Ostacolo 1")
-        cache.set_indicator(1)
-    elif obs2.are_circles_touching(trans[0], trans[1], visionfield_radius):
-        print("Ostacolo 2")
-        cache.set_cost([obs2.xc, obs2.yc, obs2.r])
-        cache.set_indicator(1)
-    else:
-        print("Nessun ostacolo")
-        cache.set_cost([0, 0, 0])
-        cache.set_indicator(0)
 
     # Get the robot's current states (position and orientation)
     states = numpy.array([trans[0], trans[1], yaw]).reshape(-1, 1)

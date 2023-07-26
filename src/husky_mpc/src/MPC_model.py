@@ -13,30 +13,17 @@ import do_mpc
 from casadi import *
 import numpy as np
 from CostCache import *
-from ObstacleCircle import *
 from tf import transformations as t
 import tf
 
 class MPC_model():
-    
-    def tvp_fun(self, t_now):
-
-        for k in range(self.n_horizon+1):
-            obs = self.cache.get_cost()
-
-            self.tvp_template['_tvp', k, 'obsx'] = obs[0]
-            self.tvp_template['_tvp', k, 'obsy'] = obs[1]
-            self.tvp_template['_tvp', k, 'r'] = obs[2]
-            self.tvp_template['_tvp', k, 'ind'] = self.cache.indicator()
-
-        return self.tvp_template
 
     def __init__(self, xd, yd, init_state): 
-
+        #model INIT
         self.cache = CostCache()
 
-        Tobs1 = t.concatenate_matrices(t.translation_matrix([-3.869, -3.90, 0.5]),
-                t.quaternion_matrix([0,0,0,0]))
+        Tobs1 = t.concatenate_matrices(t.translation_matrix([-9.675000, -0.754599, 0.5]),
+                t.quaternion_matrix(t.quaternion_from_euler(0, 0, -1.570801)))
         
         obs1 = np.dot(t.inverse_matrix(self.cache.get_T()), Tobs1)
 
@@ -46,8 +33,8 @@ class MPC_model():
         print(x1)
         print(y1)
 
-        Tobs2 = t.concatenate_matrices(t.translation_matrix([2.319553, 1.935462, 0.5]),
-                t.quaternion_matrix(t.quaternion_from_euler(0, 0, -0.759973)))
+        Tobs2 = t.concatenate_matrices(t.translation_matrix([-5.674, -2.7733, 0.5]),
+                t.quaternion_matrix(t.quaternion_from_euler(0, 0, 1.57)))
         
         obs2 = np.dot(t.inverse_matrix(self.cache.get_T()), Tobs2)
 
@@ -65,13 +52,6 @@ class MPC_model():
         self.yd = yd
 
         self.model = do_mpc.model.Model(model_type)
-        
-
-        # Define obstacle cost time-variing variable
-        self.obsx = self.model.set_variable(var_type='_tvp', var_name='obsx')
-        self.obsy = self.model.set_variable(var_type='_tvp', var_name='obsy')
-        self.r = self.model.set_variable(var_type='_tvp', var_name='r')
-        self.ind = self.model.set_variable(var_type='_tvp', var_name='ind')
 
         # Define state variables 
         self.x = self.model.set_variable(var_type='_x', var_name='x', shape=(1, 1))
@@ -88,6 +68,10 @@ class MPC_model():
         self.model.set_rhs('theta', self.w)
         self.model.setup()
 
+        #break class
+
+
+        #mpc controller INIT
         setup_mpc = {
             'n_horizon': self.n_horizon,
             't_step': 0.1,
@@ -102,18 +86,19 @@ class MPC_model():
 
         # Set reference points for state variables
 
-        oterm1 = 5*np.exp(-((self.x-x1)**2)/(5) - ((self.y-y1)**2)/(5))
-        oterm2 = 10*np.exp(-((self.x-x2)**2)/(7.5) - ((self.y-y2)**2)/(2.5))
-        mterm = 1/10*(self.x - self.xd)**2 + 1/10*(self.y - self.yd)**2
-        lterm = mterm + 1/2*self.v**2 + 1/2*self.w**2 + oterm1 + oterm2
+        #oterm1 = 50*np.exp(-((self.x-x1)**2)/(37.5) - ((self.y-y1)**2)/(1/50))
+        oterm2 = 20*np.exp(-((self.x-x2)**2)/(1) - ((self.y-y2)**2)/(20))
+        mterm = 0.1*(self.x - self.xd)**2 + 0.1*(self.y - self.yd)**2 + oterm2
+        lterm = mterm + 1/2*self.v**2 + 1/2*self.w**2 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
 
-        self.tvp_template = self.mpc.get_tvp_template()
-        self.mpc.set_tvp_fun(self.tvp_fun)
-
         # Set lower bounds on states
-        #self.mpc.bounds['lower', '_x', 'x'] = 0
-        #self.mpc.bounds['lower', '_x', 'y'] = 0
+        self.mpc.bounds['lower', '_x', 'x'] = 0
+        self.mpc.bounds['lower', '_x', 'y'] = 0
+
+        self.mpc.bounds['upper', '_x', 'x'] = 18
+        self.mpc.bounds['upper', '_x', 'y'] = 18
+
         self.mpc.bounds['lower', '_x', 'theta'] = -np.pi
         self.mpc.bounds['upper', '_x', 'theta'] = np.pi
 

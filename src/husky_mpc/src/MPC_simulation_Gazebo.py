@@ -9,9 +9,9 @@ import numpy as np
 from gazebo_msgs.srv import GetLinkState 
 import geometry_msgs.msg
 from utility import *
-from ObstacleCircle import *
 from CostCache import *
 
+#mpc controller INIT
 
 cache = CostCache()
 visionfield_radius = 1
@@ -33,7 +33,7 @@ move_cmd = Twist()
 rate = rospy.Rate(10)
 
 # Create an instance of the MPC_model class
-xd = [14]
+xd = [4]
 yd = [14]
 
 mpc_model = MPC_model(xd[0], yd[0], init_state=[0, 0, 0]) #Reference Positioning
@@ -45,6 +45,8 @@ u0 = np.array([0, 0]).reshape(2, 1)
 # Main ROS loop
 time = 0
 
+
+#mpc controller UPDATE
 while not rospy.is_shutdown():
     new_pose = get_link_states('husky::base_link', 'world') 
     new_T_O_W = t.concatenate_matrices(t.translation_matrix([new_pose.link_state.pose.position.x, new_pose.link_state.pose.position.y, new_pose.link_state.pose.position.z]),
@@ -75,3 +77,15 @@ while not rospy.is_shutdown():
 
     # Sleep according to the defined rate
     rate.sleep()
+
+
+
+#MAIN CONTROL LOOP file
+"""
+1)init model
+2)init controller
+3)while del controller
+    - update del controller
+
+4)python make file ---
+"""

@@ -25,7 +25,6 @@ class Obstacle:
         self.ymin = 0
 
 
-
     def get_model_boundingbox(model_name):
         rospy.wait_for_service('/gazebo/get_link_state')
         try:

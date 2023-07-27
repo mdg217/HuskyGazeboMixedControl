@@ -1,34 +1,43 @@
 import rospy
-from geometry_msgs.msg import Twist
-import tf
-import tf2_ros
-from tf import transformations as t
 import numpy as np
-from gazebo_msgs.srv import GetLinkState 
-import geometry_msgs.msg
+from CostCache import *
+from utility import *
+from gazebo_msgs.srv import GetModelState
 
 
 class Obstacle:
 
     def __init__(self):
 
-        #accedi da gazebo al nome passato per argomento e preleva la posa e le dimensioni
+        #Get obstacles from parameter server
+        self.cache = CostCache()
+        self.obs_odom = []
+        #self.num = rospy.get_param("/number_of_obstacles")
+
+        """for i in range(self.num):
+            param = "/obs" + str(i+1)
+            self.obs_odom.append(get_obstacle_position_odom(self.cache.get_T(), rospy.get_param(param)[0:6]) + rospy.get_param(param)[6:])"""
+        
+        self.get_pose_from_gazebo()
+
+        for obs in self.obs_odom:
+            print(obs)
+
+
+    def get_pose_from_gazebo(self):
+
+        rospy.wait_for_service('/gazebo/get_model_state')
+        
+        for i in range(9):
+            get_model_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
+            obstacle = "obstacle" + str(i)
+            param = get_model_state(obstacle , "")
+            pose = [param.pose.position.x, param.pose.position.y, param.pose.position.z, param.pose.orientation.x, param.pose.orientation.y, param.pose.orientation.z, param.pose.orientation.w]
+            self.obs_odom.append(get_obstacle_position_odom(self.cache.get_T(), pose) + [1, 1])
         
 
-        #calcola e imposta i vari valori
-        self.xc = 0
-        self.yc = 0
-        self.xmax = 0
-        self.xmin = 0
-        self.ymax = 0
-        self.ymin = 0
+    def get_obs(self):
+        return self.obs_odom
 
-
-    def get_model_boundingbox(model_name):
-        rospy.wait_for_service('/gazebo/get_link_state')
-        try:
-            get_link_state = rospy.ServiceProxy('/gazebo/get_link_state', GetLinkState)
-            state = get_link_state(link_name, reference_frame)
-            return state
-        except rospy.ServiceException as e:
-            print("Service call failed: %s"%e)
+    def get_max_min(self):
+        return []

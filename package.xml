@@ -2,7 +2,7 @@
 <package format="2">
   <name>husky_mpc_datadriven</name>
   <version>0.0.0</version>
-  <description>The HuskyGazeboMixedControl package</description>
+  <description>The husky_mpc_datadriven package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

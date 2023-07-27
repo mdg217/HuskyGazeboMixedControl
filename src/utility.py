@@ -17,7 +17,7 @@ def get_link_states(link_name, reference_frame):
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
 
-def get_init_position():
+def get_position():
     T_odom_world = get_link_states('husky::base_link', 'world') #its the same as T_baselink_world
     TOW = t.concatenate_matrices(t.translation_matrix([T_odom_world.link_state.pose.position.x, T_odom_world.link_state.pose.position.y, T_odom_world.link_state.pose.position.z]),
             t.quaternion_matrix([T_odom_world.link_state.pose.orientation.x, T_odom_world.link_state.pose.orientation.y, T_odom_world.link_state.pose.orientation.z, T_odom_world.link_state.pose.orientation.w]))
@@ -26,9 +26,21 @@ def get_init_position():
 
 def get_actual_position(init_position):
 
-    actual_position = get_init_position()
+    actual_position = get_position()
 
     result = np.dot(t.inverse_matrix(init_position),actual_position)
+    trans = tf.transformations.translation_from_matrix(result)
+    rot = tf.transformations.quaternion_from_matrix(result)
+    (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(rot)
+
+    return [trans[0], trans[1], trans[2], roll, pitch, yaw]
+
+def get_obstacle_position_odom(init_position, obs_position_world):
+
+    obs_pos = t.concatenate_matrices(t.translation_matrix([obs_position_world[0], obs_position_world[1], obs_position_world[2]]),
+            t.quaternion_matrix(([obs_position_world[3], obs_position_world[4], obs_position_world[5], obs_position_world[6]])))
+
+    result = np.dot(t.inverse_matrix(init_position),obs_pos)
     trans = tf.transformations.translation_from_matrix(result)
     rot = tf.transformations.quaternion_from_matrix(result)
     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(rot)

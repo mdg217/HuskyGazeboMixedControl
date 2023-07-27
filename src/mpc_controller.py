@@ -11,10 +11,28 @@ from casadi import *
 import numpy as np
 from CostCache import *
 from model import *
+from obstacle import *
 
 class MPC_controller:
 
     def __init__(self, xd, yd, init_state):
+
+        cache = CostCache()
+
+        rospy.init_node('husky', anonymous=True)
+
+        # Get the trasformation between odom and world
+        self.init_position = get_position()
+        cache.set_T(self.init_position)
+
+        # Initialize ROS node
+        self.pub = rospy.Publisher('/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
+
+        # Create a Twist message for robot motion
+        self.move_cmd = Twist()
+
+        # Set the rate for the ROS loop
+        self.rate = rospy.Rate(10)
 
         self.model = Model().get_model()
         self.xd = xd
@@ -41,22 +59,6 @@ class MPC_controller:
         self.mpc.x0 = x0
         self.mpc.set_initial_guess()
 
-        cache = CostCache()
-
-        rospy.init_node('husky', anonymous=True)
-
-        # Get the trasformation between odom and world
-        self.init_position = get_init_position()
-        cache.set_T(self.init_position)
-
-        # Initialize ROS node
-        self.pub = rospy.Publisher('/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
-
-        # Create a Twist message for robot motion
-        self.move_cmd = Twist()
-
-        # Set the rate for the ROS loop
-        self.rate = rospy.Rate(10)
     
     def update(self):
 
@@ -64,8 +66,6 @@ class MPC_controller:
         actual_position = get_actual_position(self.init_position)
         states = numpy.array([actual_position[0], actual_position[1], actual_position[5]]).reshape(-1, 1)
         print(states)
-
-        #publish_tf(actual_position[0:3], actual_position[3:])
 
         #Implement disturbance on the model
         states_noise = np.array(add_noise_to_states(states)).reshape(-1,1)
@@ -105,9 +105,22 @@ class MPC_controller:
         self.mpc.bounds['upper', '_u', 'v'] = 1
         self.mpc.bounds['upper', '_u', 'w'] = 1
 
+
     def set_cost_function(self):
 
-        #Add the term for the 
-        mterm = 0.1*(self.model.x['x'] - self.xd)**2 + 0.1*(self.model.x['y'] - self.yd)**2
+        obstacles = Obstacle()
+
+        k = 20
+        sx = 0.25
+        sy = 0.25
+
+        mterm = 0.1*(self.model.x['x'] - self.xd)**2 + 0.1*(self.model.x['y'] - self.yd)**2 
+        
+        for obs in obstacles.get_obs():
+            xterm = ((self.model.x['x']-obs[0])/sx)**2
+            yterm = ((self.model.x['y']-obs[1])/sy)**2
+            mterm += k*np.exp(-0.5*(xterm + yterm))
+
+        
         lterm = mterm + 1/2*self.model.u['v']**2 + 1/2*self.model.u['w']**2 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)

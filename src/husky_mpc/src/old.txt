@@ -1,0 +1,21 @@
+Tobs1 = t.concatenate_matrices(t.translation_matrix([-9.675000, -0.754599, 0.5]),
+                t.quaternion_matrix(t.quaternion_from_euler(0, 0, -1.570801)))
+        
+        obs1 = np.dot(t.inverse_matrix(self.cache.get_T()), Tobs1)
+
+        x1 = tf.transformations.translation_from_matrix(obs1)[0]
+        y1 = tf.transformations.translation_from_matrix(obs1)[1]
+
+        print(x1)
+        print(y1)
+
+        Tobs2 = t.concatenate_matrices(t.translation_matrix([-5.674, -2.7733, 0.5]),
+                t.quaternion_matrix(t.quaternion_from_euler(0, 0, 1.57)))
+        
+        obs2 = np.dot(t.inverse_matrix(self.cache.get_T()), Tobs2)
+
+        x2 = tf.transformations.translation_from_matrix(obs2)[0]
+        y2 = tf.transformations.translation_from_matrix(obs2)[1]
+
+        print(x2)
+        print(y2)

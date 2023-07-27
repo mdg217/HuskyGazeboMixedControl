@@ -3,7 +3,6 @@ from geometry_msgs.msg import Twist
 import tf
 import tf2_ros
 from tf import transformations as t
-from MPC_model import *
 import numpy as np
 from gazebo_msgs.srv import GetLinkState 
 import geometry_msgs.msg

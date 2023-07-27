@@ -74,7 +74,7 @@ class MPC_controller:
         u = self.mpc.make_step(states)
 
         # Set the linear and angular velocities for the robot's motion
-        self.move_cmd.linear.x = u[0]
+        self.move_cmd.linear.x = u[0] 
         self.move_cmd.angular.z = u[1]
 
         # Publish the motion command

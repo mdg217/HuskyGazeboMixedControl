@@ -1,7 +1,7 @@
 import do_mpc
 from casadi import *
 import numpy as np
-from CostCache import *
+from cost_cache import *
 from tf import transformations as t
 import tf
 

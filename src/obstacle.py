@@ -1,6 +1,6 @@
 import rospy
 import numpy as np
-from CostCache import *
+from cost_cache import *
 from utility import *
 from gazebo_msgs.srv import GetModelState
 

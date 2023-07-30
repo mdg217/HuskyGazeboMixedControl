@@ -110,17 +110,18 @@ class MPC_controller:
 
         obstacles = Obstacle()
 
-        k = 20
-        sx = 0.25
-        sy = 0.25
+        k = 100
+        sx = 0.7
+        sy = 0.7
 
-        mterm = 0.1*(self.model.x['x'] - self.xd)**2 + 0.1*(self.model.x['y'] - self.yd)**2 
+        mterm = (self.model.x['x'] - self.xd)**2 + (self.model.x['y'] - self.yd)**2 
+        lterm = mterm + 1/2*self.model.u['v']**2 + 1/2*self.model.u['w']**2 
         
         for obs in obstacles.get_obs():
             xterm = ((self.model.x['x']-obs[0])/sx)**2
             yterm = ((self.model.x['y']-obs[1])/sy)**2
-            mterm += k*np.exp(-0.5*(xterm + yterm))
+            lterm += k*np.exp(-0.5*(xterm + yterm))
 
         
-        lterm = mterm + 1/2*self.model.u['v']**2 + 1/2*self.model.u['w']**2 
+        
         self.mpc.set_objective(mterm=mterm, lterm=lterm)

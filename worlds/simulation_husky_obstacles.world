@@ -130,10 +130,10 @@
       <pose>-0.464139 0 0 0 -0 0</pose>
     </model>
     <state world_name='default'>
-      <sim_time>2855 130000000</sim_time>
-      <real_time>458 679179436</real_time>
-      <wall_time>1690484721 612343271</wall_time>
-      <iterations>45827</iterations>
+      <sim_time>3051 60000000</sim_time>
+      <real_time>196 695847584</real_time>
+      <wall_time>1690540832 62415178</wall_time>
+      <iterations>19593</iterations>
       <model name='asphalt_plane'>
         <pose>0 0 0 0 -0 0</pose>
         <scale>1 1 1</scale>
@@ -155,20 +155,20 @@
         </link>
       </model>
       <model name='obstacle0'>
-        <pose>0.216465 1.24377 0.521268 0.01277 -0.012525 -0.795139</pose>
+        <pose>-0.754963 1.23437 0.521268 0.01277 -0.012525 -0.795139</pose>
         <scale>0.334437 1 1</scale>
         <link name='link'>
-          <pose>0.216465 1.24377 0.521268 0.01277 -0.012525 -0.795139</pose>
+          <pose>-0.754963 1.23437 0.521268 0.01277 -0.012525 -0.795139</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
         </link>
       </model>
       <model name='obstacle1'>
-        <pose>-4.5 1 0.521268 0.012546 -0.012751 -0.777295</pose>
+        <pose>-3.71083 1.28242 0.521268 0.012546 -0.012751 -0.777295</pose>
         <scale>0.324156 1 1</scale>
         <link name='link'>
-          <pose>-4.5 1 0.521268 0.012546 -0.012751 -0.777295</pose>
+          <pose>-3.71083 1.28242 0.521268 0.012546 -0.012751 -0.777295</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -260,7 +260,7 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>-18.5657 -17.7664 20.064 0 0.724699 0.709264</pose>
+        <pose>-14.4075 -10.0011 18.7805 0 0.844698 0.629264</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>

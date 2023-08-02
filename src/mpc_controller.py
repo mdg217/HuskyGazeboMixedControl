@@ -17,13 +17,13 @@ class MPC_controller:
 
     def __init__(self, xd, yd, init_state):
 
-        cache = CostCache()
+        self.cache = CostCache()
 
         rospy.init_node('husky', anonymous=True)
 
         # Get the trasformation between odom and world
         self.init_position = get_position()
-        cache.set_T(self.init_position)
+        self.cache.set_T(self.init_position)
 
         # Initialize ROS node
         self.pub = rospy.Publisher('/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
@@ -52,6 +52,10 @@ class MPC_controller:
 
         self.set_cost_function()
         self.set_bounds()
+
+        self.tvp = self.mpc.get_tvp_template()
+        self.mpc.set_tvp_fun(self.tvp_fun)
+
         self.mpc.setup()
         
         # Set initial state for simulations
@@ -86,6 +90,15 @@ class MPC_controller:
 
     """ METHOD FOR THE __init__ and update Method (utility)"""
 
+    def tvp_fun(self, t_now):
+        for k in range(21):
+                x,y = self.cache.next_target()
+                self.tvp_template['_tvp', k, 'xd'] = x
+                self.tvp_template['_tvp', k, 'yd'] = y
+
+        return self.tvp_template
+
+
     def set_bounds(self):
         # Set lower bounds on states
         self.mpc.bounds['lower', '_x', 'x'] = 0
@@ -114,7 +127,7 @@ class MPC_controller:
         sx = 0.7
         sy = 0.7
 
-        mterm = (self.model.x['x'] - self.xd)**2 + (self.model.x['y'] - self.yd)**2 
+        mterm = (self.model.x['x'] - self.model.tvp['xd'])**2 + (self.model.x['y'] - self.model.tvp['yd'])**2 
         lterm = mterm + 1/2*self.model.u['v']**2 + 1/2*self.model.u['w']**2 
         
         for obs in obstacles.get_obs():

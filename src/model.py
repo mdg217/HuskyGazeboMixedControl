@@ -21,6 +21,10 @@ class Model:
         self.v = self.model.set_variable(var_type='_u', var_name='v')
         self.w = self.model.set_variable(var_type='_u', var_name='w')
 
+        # Define Time-varying parameters
+        self.xd = self.model.set_variable(var_type='_tvp', var_name='xd')
+        self.yd = self.model.set_variable(var_type='_tvp', var_name='yd')
+
         # Define state equations
         self.model.set_rhs('x', self.v * np.cos(self.theta))
         self.model.set_rhs('y', self.v * np.sin(self.theta))

@@ -135,6 +135,4 @@ class MPC_controller:
             yterm = ((self.model.x['y']-obs[1])/sy)**2
             lterm += k*np.exp(-0.5*(xterm + yterm))
 
-        
-        
         self.mpc.set_objective(mterm=mterm, lterm=lterm)

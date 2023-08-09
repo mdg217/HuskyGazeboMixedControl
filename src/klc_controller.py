@@ -146,20 +146,24 @@ class KLC_controller:
     
     
     def cost(self, state):
-
-        k = 100
+        k = 50
         sx = 0.7
         sy = 0.7
 
         obsTerm = 0
 
         for obs in self.obstacles.get_obs():
-            xterm = ((state[0]-obs[0])/sx)**2
-            yterm = ((state[1]-obs[1])/sy)**2
-            obsTerm += k*np.exp(-0.5*(xterm + yterm))
+            xterm = ((state[0] - obs[0]) / sx) ** 2
+            yterm = ((state[1] - obs[1]) / sy) ** 2
+            obsTerm += k * np.exp(-0.5 * (xterm + yterm))
 
-        return (state[0]-self.xd)*(state[0]-self.xd) + (state[1]-self.yd)*(state[1]-self.yd) + obsTerm
-    
+        # Calculate the distance from the goal and introduce a regularization term
+        distance_to_goal = np.sqrt((state[0] - self.xd) ** 2 + (state[1] - self.yd) ** 2)
+        regularization_term = 0.01 * distance_to_goal  # Adjust the scaling factor as needed
+
+        # Include the regularization term in the overall cost calculation
+        return 0.1*(state[0] - self.xd) ** 2 + 0.1*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
+
     
     def unravelPF(self, pf):
     
@@ -194,26 +198,22 @@ class KLC_controller:
 
 print("Prova del sistema KLC")
 
-klc_controller = KLC_controller([6, 6])
+klc_controller = KLC_controller([16, 16])
 x, y, time = klc_controller.update()
 
 for x1, y1 in zip(x, y):
     print(str(x1) + ", " + str(y1))
 
 # Crea una griglia di subplot con 1 riga e 2 colonne
-fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
 
 # Plot del primo subplot
-axs[0].plot(time, x, marker='o', linestyle='-', color='r')
-axs[0].set_xlabel('Valori di X')
-axs[0].set_ylabel('Valori di Y')
-axs[0].set_title('Primo Plot')
-
-# Plot del secondo subplot
-axs[1].plot(time, y, marker='o', linestyle='--', color='r')
-axs[1].set_xlabel('Valori di X')
-axs[1].set_ylabel('Valori di Y')
-axs[1].set_title('Secondo Plot')
+axs.plot(x, y, marker='o', linestyle='-', color='r')
+axs.set_xlabel('X Position')
+axs.set_ylabel('Y Position')
+axs.set_title('Primo Plot')
+for obs in klc_controller.obstacles.get_obs():
+    axs.scatter(obs[0], obs[1], color='r', s=1000)
 
 # Regola la spaziatura tra i subplot
 plt.tight_layout()

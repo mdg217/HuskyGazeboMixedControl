@@ -4,10 +4,21 @@ from scipy.stats import norm
 from math import log
 import os
 from obstacle import *
+import rospy
 
 class KLC_controller:
 
     def __init__(self, goal):
+
+        self.cache = CostCache()
+
+        rospy.init_node('husky', anonymous=True)
+
+        # Get the trasformation between odom and world
+        self.init_position = get_position()
+        self.cache.set_T(self.init_position)
+
+        self.obstacles = Obstacle()
 
         #Target definition
         self.xd = goal[0]
@@ -27,6 +38,9 @@ class KLC_controller:
 
         #Number of iterations for the simulations
         self.Zsim = 30
+
+        #Duration of the simulation
+        self.duration = 100
 
         # Creazione del vettore 4D inizializzato con zeri
         self.passive_dynamics = np.zeros((self.Zdiscr[0] , self.Zdiscr[0], self.Zdiscr[0], self.Zdiscr[0]))
@@ -84,11 +98,13 @@ class KLC_controller:
 
         self.z = self.powerMethod(diagMinusQ@Prob, self.Zdiscr[0]**2) 
 
+        
+
     
     def update(self):
-        fullH = np.zeros((self.Zsim,300))
-        fullHv = np.zeros((self.Zsim,300))
-        nSteps = 300
+        fullH = np.zeros((self.Zsim,self.duration))
+        fullHv = np.zeros((self.Zsim,self.duration))
+        nSteps = self.duration
 
         #Task:  obtain simulations for different initial conditions (say, 5 different initial conditions). For each of these, run 50 simulations.
 
@@ -101,20 +117,21 @@ class KLC_controller:
             fullH[j] = [x[0] for x in hist]
             fullHv[j] = [x[1] for x in hist]
 
-        meanx = [0]*300 #Get the means and stds for plotting
-        stds = [0]*300
-        for i in range(300):
+        meanx = [0]*self.duration #Get the means and stds for plotting
+        stds = [0]*self.duration
+        for i in range(self.duration):
             meanx[i] = np.mean(fullH[:,i])
             stds[i] = np.std(fullH[:,i])
 
-        meany = [0]*300 #Get the means and stds for plotting
-        stdsv = [0]*300
-        for i in range(300):
+        meany = [0]*self.duration #Get the means and stds for plotting
+        stdsv = [0]*self.duration
+        for i in range(self.duration):
             meany[i] = np.mean(fullHv[:,i])
             stdsv[i] = np.std(fullHv[:,i])
 
+        time = np.array([time/10 for time in range(self.duration)])
 
-        return [meanx, meany]
+        return [meanx, meany, time]
 
     
     # Utility methods for init and update methods
@@ -130,15 +147,13 @@ class KLC_controller:
     
     def cost(self, state):
 
-        obstacles = Obstacle()
-
         k = 100
         sx = 0.7
         sy = 0.7
 
         obsTerm = 0
 
-        for obs in obstacles.get_obs():
+        for obs in self.obstacles.get_obs():
             xterm = ((state[0]-obs[0])/sx)**2
             yterm = ((state[1]-obs[1])/sy)**2
             obsTerm += k*np.exp(-0.5*(xterm + yterm))
@@ -176,11 +191,32 @@ class KLC_controller:
         ind = np.random.choice(range(self.Zdiscr[0]**2), p=pf_weighted) #Get the new (enumerated) state index using the calculated dynamics
         newState = self.stateVect[ind] #Get the new state from the state vector
         return(newState)
-    
 
 print("Prova del sistema KLC")
 
 klc_controller = KLC_controller([6, 6])
-x,y = klc_controller.update()
-print(x)
-print(y)
+x, y, time = klc_controller.update()
+
+for x1, y1 in zip(x, y):
+    print(str(x1) + ", " + str(y1))
+
+# Crea una griglia di subplot con 1 riga e 2 colonne
+fig, axs = plt.subplots(1, 2, figsize=(10, 5))
+
+# Plot del primo subplot
+axs[0].plot(time, x, marker='o', linestyle='-', color='r')
+axs[0].set_xlabel('Valori di X')
+axs[0].set_ylabel('Valori di Y')
+axs[0].set_title('Primo Plot')
+
+# Plot del secondo subplot
+axs[1].plot(time, y, marker='o', linestyle='--', color='r')
+axs[1].set_xlabel('Valori di X')
+axs[1].set_ylabel('Valori di Y')
+axs[1].set_title('Secondo Plot')
+
+# Regola la spaziatura tra i subplot
+plt.tight_layout()
+
+# Mostra i subplot
+plt.show()

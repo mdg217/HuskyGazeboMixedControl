@@ -119,20 +119,9 @@ class MPC_controller:
         self.mpc.bounds['upper', '_u', 'w'] = 1
 
 
-    def set_cost_function(self):
-
-        obstacles = Obstacle()
-
-        k = 100
-        sx = 0.7
-        sy = 0.7
+    def set_cost_function(self):       
 
         mterm = (self.model.x['x'] - self.model.tvp['xd'])**2 + (self.model.x['y'] - self.model.tvp['yd'])**2 
         lterm = mterm + 1/2*self.model.u['v']**2 + 1/2*self.model.u['w']**2 
-        
-        for obs in obstacles.get_obs():
-            xterm = ((self.model.x['x']-obs[0])/sx)**2
-            yterm = ((self.model.x['y']-obs[1])/sy)**2
-            lterm += k*np.exp(-0.5*(xterm + yterm))
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)

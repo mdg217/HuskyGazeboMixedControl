@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import norm
 from math import log
 import os
+from obstacle import *
 
 class KLC_controller:
 
@@ -37,7 +38,7 @@ class KLC_controller:
                 current_state = (row, col)
 
                 # Transizioni possibili: su, giù, sinistra, destra
-                possible_transitions = [(0, -1), (0, 1), (-1, 0), (1, 0)]
+                possible_transitions = [(0, -1), (0, 1), (-1, 0), (1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
 
                 for dr, dc in possible_transitions:
                     next_row = row + dr
@@ -54,7 +55,7 @@ class KLC_controller:
                 self.passive_dynamics[row, col, row, col] = 0       
 
 
-        stateVect = np.zeros((self.Zdiscr[0]**2, 2))
+        self.stateVect = np.zeros((self.Zdiscr[0]**2, 2))
 
         for i in range(self.Zdiscr[0]):
             #Enumerate the states from 1 to 36^2. Here we explicitly build the enumeration to later build the Q matrix and for convenience
@@ -65,13 +66,13 @@ class KLC_controller:
                 # Calculate the index of the current state in the state vector
                 ind = i*self.Zdiscr[0] + j
                 # Assign the angle and speed values to the state vector
-                stateVect[ind] = [x, y] 
+                self.stateVect[ind] = [x, y] 
 
         diagMinusQ = np.zeros((self.Zdiscr[0]**2, self.Zdiscr[0]**2))
-        #Q matrix
+
         for i in range(self.Zdiscr[0]**2):
             #Build the diagonal matrix with the exponential of the opposite of the cost
-            diagMinusQ[i,i] = np.exp(-self.cost(stateVect[i]))
+            diagMinusQ[i,i] = np.exp(-self.cost(self.stateVect[i]))
 
         Prob = np.zeros((self.Zdiscr[0]**2, self.Zdiscr[0]**2))
 
@@ -100,48 +101,20 @@ class KLC_controller:
             fullH[j] = [x[0] for x in hist]
             fullHv[j] = [x[1] for x in hist]
 
-        x = [0]*300 #Get the means and stds for plotting
+        meanx = [0]*300 #Get the means and stds for plotting
         stds = [0]*300
         for i in range(300):
-            x[i] = np.mean(fullH[:,i])
+            meanx[i] = np.mean(fullH[:,i])
             stds[i] = np.std(fullH[:,i])
 
-        from pylab import rcParams
-        plt.rcParams.update({'font.size': 18})
-
-        #PLOT X -> Angle
-        x = np.array([x/10 for x in range(300)])
-        y = np.array(x)
-        ci = np.array(stds)
-
-        fig, ax = plt.subplots()
-        plt.xlim([0, 3])
-        ax.plot(x,y)
-        plt.xlabel("Time")
-        plt.ylabel("x")
-        plt.title("Position on x")
-        ax.fill_between(x, (y-ci), (y+ci), color='b', alpha=.1)
-
-        y = [0]*300 #Get the means and stds for plotting
+        meany = [0]*300 #Get the means and stds for plotting
         stdsv = [0]*300
         for i in range(300):
-            y[i] = np.mean(fullHv[:,i])
+            meany[i] = np.mean(fullHv[:,i])
             stdsv[i] = np.std(fullHv[:,i])
 
-        #PLOT Vx -> Speed
-        xv = np.array([x/10 for x in range(300)])
-        yv = np.array(y)
-        civ = np.array(stdsv)
 
-        figv, axv = plt.subplots()
-        plt.xlim([0, 3])
-        plt.xlabel("Time")
-        plt.ylabel("y")
-        plt.title("Position on y")
-        axv.plot(xv,yv)
-        axv.fill_between(xv, (yv-civ), (yv+civ), color='b', alpha=.1)
-
-        return [x, y]
+        return [meanx, meany]
 
     
     # Utility methods for init and update methods
@@ -156,12 +129,21 @@ class KLC_controller:
     
     
     def cost(self, state):
-        
-        #Aggiungere il codice per tutti gli ostacoli di ros
-        xterm = ((state[0]-4)/0.7)*((state[0]-4)/0.7)
-        yterm = ((state[1]-4)/0.7)*((state[1]-4)/0.7)
 
-        return (state[0]-self.xd)*(state[0]-self.xd) + (state[1]-self.yd)*(state[1]-self.yd) + 100000*np.exp(-0.5* (xterm + yterm))
+        obstacles = Obstacle()
+
+        k = 100
+        sx = 0.7
+        sy = 0.7
+
+        obsTerm = 0
+
+        for obs in obstacles.get_obs():
+            xterm = ((state[0]-obs[0])/sx)**2
+            yterm = ((state[1]-obs[1])/sy)**2
+            obsTerm += k*np.exp(-0.5*(xterm + yterm))
+
+        return (state[0]-self.xd)*(state[0]-self.xd) + (state[1]-self.yd)*(state[1]-self.yd) + obsTerm
     
     
     def unravelPF(self, pf):
@@ -198,5 +180,7 @@ class KLC_controller:
 
 print("Prova del sistema KLC")
 
-klc_controller = KLC_controller([10, 10])
+klc_controller = KLC_controller([6, 6])
 x,y = klc_controller.update()
+print(x)
+print(y)

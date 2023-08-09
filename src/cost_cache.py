@@ -12,6 +12,8 @@ class CostCache:
         self.cost = [0, 0, 0]
         self.ind = 0
         self.T = None
+        self.target_x = []
+        self.target_y = []
 
     def get_cost(self):
         # Ottiene il costo dalla cache
@@ -31,6 +33,13 @@ class CostCache:
     def set_T(self, T):
         self.T = T
 
+    def set_next_target(self, x, y):
+        self.target_x = x
+        self.target_y = y
+
     def indicator(self):
         return self.ind
+    
+    def next_target(self, index):
+        return [self.target_x[index], self.target_y[index]]
 

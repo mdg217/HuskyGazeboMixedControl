@@ -15,11 +15,18 @@ from obstacle import *
 
 class MPC_controller:
 
-    def __init__(self, xd, yd, init_state):
+    def tvp_fun(self, t_now):
+        for k in range(21):
+                x, y = self.cache.next_target(self.index)
+                self.tvp_template['_tvp', k, 'xd'] = x
+                self.tvp_template['_tvp', k, 'yd'] = y
+
+        return self.tvp_template
+
+    def __init__(self, init_state):
 
         self.cache = CostCache()
-
-        rospy.init_node('husky', anonymous=True)
+        self.index = 0
 
         # Get the trasformation between odom and world
         self.init_position = get_position()
@@ -35,8 +42,6 @@ class MPC_controller:
         self.rate = rospy.Rate(10)
 
         self.model = Model().get_model()
-        self.xd = xd
-        self.yd = yd
 
         #mpc controller INIT
         setup_mpc = {
@@ -53,7 +58,7 @@ class MPC_controller:
         self.set_cost_function()
         self.set_bounds()
 
-        self.tvp = self.mpc.get_tvp_template()
+        self.tvp_template = self.mpc.get_tvp_template()
         self.mpc.set_tvp_fun(self.tvp_fun)
 
         self.mpc.setup()
@@ -62,8 +67,9 @@ class MPC_controller:
         x0 = np.array(init_state).reshape(-1, 1)
         self.mpc.x0 = x0
         self.mpc.set_initial_guess()
+        
 
-    
+
     def update(self):
 
         # Get the robot's current states (position and orientation)
@@ -77,6 +83,10 @@ class MPC_controller:
         # Perform MPC step to get the control input
         u = self.mpc.make_step(states)
 
+        #Change reference if the previous target got
+        if u[0] <= 0.3 and u[1] <= 0.3:
+            self.index+=1
+
         # Set the linear and angular velocities for the robot's motion
         self.move_cmd.linear.x = u[0] 
         self.move_cmd.angular.z = u[1]
@@ -89,14 +99,6 @@ class MPC_controller:
 
 
     """ METHOD FOR THE __init__ and update Method (utility)"""
-
-    def tvp_fun(self, t_now):
-        for k in range(21):
-                x,y = self.cache.next_target()
-                self.tvp_template['_tvp', k, 'xd'] = x
-                self.tvp_template['_tvp', k, 'yd'] = y
-
-        return self.tvp_template
 
 
     def set_bounds(self):

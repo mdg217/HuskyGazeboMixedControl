@@ -198,7 +198,7 @@ class KLC_controller:
 
 print("Prova del sistema KLC")
 
-klc_controller = KLC_controller([16, 16])
+klc_controller = KLC_controller([15, 15])
 x, y, time = klc_controller.update()
 
 for x1, y1 in zip(x, y):

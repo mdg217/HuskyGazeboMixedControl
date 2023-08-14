@@ -23,6 +23,7 @@ class MPC_controller:
 
         return self.tvp_template
 
+
     def __init__(self, init_state):
 
         self.cache = CostCache()
@@ -67,7 +68,6 @@ class MPC_controller:
         x0 = np.array(init_state).reshape(-1, 1)
         self.mpc.x0 = x0
         self.mpc.set_initial_guess()
-        
 
 
     def update(self):
@@ -84,7 +84,7 @@ class MPC_controller:
         u = self.mpc.make_step(states)
 
         #Change reference if the previous target got
-        if u[0] <= 0.3 and u[1] <= 0.3:
+        if u[0] <= 0.5 and u[1] <= 0.5:
             self.index+=1
 
         # Set the linear and angular velocities for the robot's motion
@@ -99,7 +99,6 @@ class MPC_controller:
 
 
     """ METHOD FOR THE __init__ and update Method (utility)"""
-
 
     def set_bounds(self):
         # Set lower bounds on states

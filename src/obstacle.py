@@ -7,6 +7,8 @@ from gazebo_msgs.srv import GetModelState
 
 class Obstacle:
 
+    NOBSTACLES = 9
+
     def __init__(self):
 
         #Get obstacles from parameter server
@@ -28,7 +30,7 @@ class Obstacle:
 
         rospy.wait_for_service('/gazebo/get_model_state')
         
-        for i in range(9):
+        for i in range(self.NOBSTACLES):
             get_model_state = rospy.ServiceProxy('/gazebo/get_model_state', GetModelState)
             obstacle = "obstacle" + str(i)
             param = get_model_state(obstacle , "")

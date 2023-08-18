@@ -3,9 +3,9 @@ from casadi import *
 import numpy as np
 from cost_cache import *
 from tf import transformations as t
-import tf
+from model import *
 
-class Model:
+class Model():
 
     def __init__(self):
 

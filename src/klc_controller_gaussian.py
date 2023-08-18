@@ -6,7 +6,7 @@ import os
 from obstacle import *
 import rospy
 
-class KLC_controller:
+class KLC_controller_gaussian:
 
     def __init__(self, goal):
 
@@ -45,29 +45,7 @@ class KLC_controller:
         # Creazione del vettore 4D inizializzato con zeri
         self.passive_dynamics = np.zeros((self.Zdiscr[0] , self.Zdiscr[0], self.Zdiscr[0], self.Zdiscr[0]))
 
-        # Popolamento delle transizioni per gli stati adiacenti
-        for row in range(self.Zdiscr[0]):
-            for col in range(self.Zdiscr[0]):
-                # Stato attuale
-                current_state = (row, col)
-
-                # Transizioni possibili: su, giù, sinistra, destra
-                possible_transitions = [(0, -1), (0, 1), (-1, 0), (1, 0), (1, 1), (1, -1), (-1, -1), (-1, 1)]
-
-                for dr, dc in possible_transitions:
-                    next_row = row + dr
-                    next_col = col + dc
-
-                    # Verifica se la prossima posizione è all'interno della griglia
-                    if 0 <= next_row < self.Zdiscr[0] and 0 <= next_col < self.Zdiscr[0]:
-                        # Imposta la probabilità della transizione da current_state a next_state
-                        self.passive_dynamics[row, col, next_row, next_col] = 1.0 / len(possible_transitions)
-
-        # Impostazione delle celle di transizione dallo stato attuale a se stesso a 0
-        for row in range(self.Zdiscr[0]):
-            for col in range(self.Zdiscr[0]):
-                self.passive_dynamics[row, col, row, col] = 0       
-
+        
 
         self.stateVect = np.zeros((self.Zdiscr[0]**2, 2))
 
@@ -82,7 +60,7 @@ class KLC_controller:
                 # Assign the angle and speed values to the state vector
                 self.stateVect[ind] = [x, y] 
 
-        diagMinusQ = np.zeros((self.Zdiscr[0]**2, self.Zdiscr[0]**2))
+        diagMinusQ = np.zeros((self.Zdiscr[0]**2, self.Zdiscr[0]**2)) # q
 
         for i in range(self.Zdiscr[0]**2):
             #Build the diagonal matrix with the exponential of the opposite of the cost
@@ -96,9 +74,11 @@ class KLC_controller:
                 ind1 = i*self.Zdiscr[0] + j
                 Prob[ind1] = self.unravelPF(pf)
 
-        self.z = self.powerMethod(diagMinusQ@Prob, self.Zdiscr[0]**2) 
+        for x in Prob:
+            print(x)
 
-        
+
+        self.z = self.powerMethod(diagMinusQ@Prob, self.Zdiscr[0]**2) 
 
     
     def update(self):
@@ -173,6 +153,7 @@ class KLC_controller:
                 res[i*self.Zdiscr[0]+j] = pf[i][j]
         return(res)
     
+    
     def powerMethod(self, mat, dim):
     
         vect = np.ones(dim) #Initial guess
@@ -198,11 +179,8 @@ class KLC_controller:
 
 print("Prova del sistema KLC")
 
-klc_controller = KLC_controller([15, 15])
+klc_controller = KLC_controller_gaussian([16, 16])
 x, y, time = klc_controller.update()
-
-for x1, y1 in zip(x, y):
-    print(str(x1) + ", " + str(y1))
 
 # Crea una griglia di subplot con 1 riga e 2 colonne
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))

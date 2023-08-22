@@ -9,8 +9,19 @@ from Plants.uniform_plant import *
 from Plants.linearized_plant import *
 from Plants.gaussian_linearized_plant import *
 
-class KLC_controller:
+"""
+ControllerKLC: A class implementing a Kinematic Linearization Controller (KLC) for robot motion planning.
 
+This class defines methods to initialize the controller and update its behavior based on robot states.
+"""
+class ControllerKLC:
+
+    """
+    Update the controller's behavior based on the current state.
+    
+    :param self: The instance of the class.
+    :return: Lists containing mean x position, mean y position, and time.
+    """
     def __init__(self, goal, mode):
 
         self.cache = CostCache()
@@ -28,29 +39,29 @@ class KLC_controller:
         self.yd = goal[1]
         
         #Dimensions of the variables
-        self.Zdim = 2
+        self.zdim = 2
 
         #Minimum values
-        self.Zmin = [0, 0] 
+        self.zmin = [0, 0] 
 
         #Discretization steps
-        self.Zstep = [0.5, 0.5]
+        self.zstep = [0.5, 0.5]
 
         #Amount of discrete bins
-        self.Zdiscr = [37, 37]
+        self.zdiscr = [37, 37]
 
         #Number of iterations for the simulations
-        self.Zsim = 30
+        self.zsim = 30
 
         #Duration of the simulation
         self.duration = 100
 
         # Creazione del vettore 4D inizializzato con zeri
 
-        self.passive_dynamics = np.zeros((self.Zdiscr[0], self.Zdiscr[0], self.Zdiscr[0], self.Zdiscr[0]))
+        self.passive_dynamics = np.zeros((self.zdiscr[0], self.zdiscr[0], self.zdiscr[0], self.zdiscr[0]))
 
         if mode == 0:
-            self.passive_dynamics = uniform_plant().get_plant(self.Zdiscr[0])
+            self.passive_dynamics = uniform_plant().get_plant(self.zdiscr[0])
             print(type(self.passive_dynamics)) 
         elif mode == 1:
             self.passive_dynamics = linearized_plant().get_plant(2)
@@ -58,44 +69,50 @@ class KLC_controller:
             self.passive_dynamics = gaussian_linearized_plant().get_plant(2)       
 
 
-        self.stateVect = np.zeros((self.Zdiscr[0]**2, 2))
+        self.stateVect = np.zeros((self.zdiscr[0]**2, 2))
 
-        for i in range(self.Zdiscr[0]):
+        for i in range(self.zdiscr[0]):
             #Enumerate the states from 1 to 36^2. Here we explicitly build the enumeration to later build the Q matrix and for convenience
-            for j in range(self.Zdiscr[0]):
+            for j in range(self.zdiscr[0]):
                 # Compute the angle and speed values for the current state
-                x = (i)*self.Zstep[0]
-                y = (j)*self.Zstep[0]
+                x = (i)*self.zstep[0]
+                y = (j)*self.zstep[0]
                 # Calculate the index of the current state in the state vector
-                ind = i*self.Zdiscr[0] + j
+                ind = i*self.zdiscr[0] + j
                 # Assign the angle and speed values to the state vector
                 self.stateVect[ind] = [x, y] 
 
-        diagMinusQ = np.zeros((self.Zdiscr[0]**2, self.Zdiscr[0]**2)) # q
+        diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
 
-        for i in range(self.Zdiscr[0]**2):
+        for i in range(self.zdiscr[0]**2):
             #Build the diagonal matrix with the exponential of the opposite of the cost
             diagMinusQ[i,i] = np.exp(-self.cost(self.stateVect[i]))
 
-        Prob = np.zeros((self.Zdiscr[0]**2, self.Zdiscr[0]**2))
+        Prob = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2))
 
-        for i in range(self.Zdiscr[0]):
-            for j in range(self.Zdiscr[0]):
+        for i in range(self.zdiscr[0]):
+            for j in range(self.zdiscr[0]):
                 pf = self.passive_dynamics[i,j]
-                ind1 = i*self.Zdiscr[0] + j
+                ind1 = i*self.zdiscr[0] + j
                 Prob[ind1] = self.unravelPF(pf)
 
 
-        self.z = self.powerMethod(diagMinusQ@Prob, self.Zdiscr[0]**2) 
+        self.z = self.powerMethod(diagMinusQ@Prob, self.zdiscr[0]**2) 
     
+    """
+    Update the controller's behavior based on the current state.
+    
+    :param self: The instance of the class.
+    :return: Lists containing mean x position, mean y position, and time.
+    """
     def update(self):
-        fullH = np.zeros((self.Zsim,self.duration))
-        fullHv = np.zeros((self.Zsim,self.duration))
+        fullH = np.zeros((self.zsim,self.duration))
+        fullHv = np.zeros((self.zsim,self.duration))
         nSteps = self.duration
 
         #Task:  obtain simulations for different initial conditions (say, 5 different initial conditions). For each of these, run 50 simulations.
 
-        for j in range(self.Zsim): #Perform 50 simulations
+        for j in range(self.zsim): #Perform 50 simulations
             hist = [[0,0]]*nSteps
             state = [0, 0] #Initialize the pendulum <------------
             for i in range(nSteps): #For each step
@@ -123,6 +140,16 @@ class KLC_controller:
     
     # Utility methods for init and update methods
 
+
+    """
+    Discretize the continuous state variables.
+    
+    :param Z: The continuous state variables.
+    :param Zdim: The dimensionality of the variables.
+    :param Zmin: The minimum values for each dimension.
+    :param Zstep: The discretization steps for each dimension.
+    :return: The discretized indices.
+    """
     def discretize(self, Z, Zdim, Zmin, Zstep):
         res = [0]*Zdim #n-dimensional index
         for i in range(Zdim): #For each dimension
@@ -132,6 +159,12 @@ class KLC_controller:
         return(tuple(res)) #Return as tuple for array indexing
     
     
+    """
+    Calculate the cost of a given state.
+    
+    :param state: The state to calculate the cost for.
+    :return: The calculated cost.
+    """
     def cost(self, state):
         k = 30
         sx = 0.7
@@ -159,29 +192,49 @@ class KLC_controller:
         return 0.1*(state[0] - self.xd) ** 2 + 0.1*(state[1] - self.yd) ** 2 + obsTerm + regularization_term"""
 
     
+    """
+    Unravel a 2D passive dynamics array into a 1D array.
+    
+    :param pf: The 2D passive dynamics array.
+    :return: The unraveled 1D array.
+    """
     def unravelPF(self, pf):
     
-        res = np.zeros(self.Zdiscr[0]**2)
-        for i in range(self.Zdiscr[0]):
-            for j in range(self.Zdiscr[0]):
-                res[i*self.Zdiscr[0]+j] = pf[i][j]
+        res = np.zeros(self.zdiscr[0]**2)
+        for i in range(self.zdiscr[0]):
+            for j in range(self.zdiscr[0]):
+                res[i*self.zdiscr[0]+j] = pf[i][j]
         return(res)
     
     
+    """
+    Perform the power method for eigenvalue estimation.
+    
+    :param mat: The matrix for eigenvalue estimation.
+    :param dim: The dimensionality of the matrix.
+    :return: The estimated eigenvector.
+    """
     def powerMethod(self, mat, dim):
     
         vect = np.ones(dim) #Initial guess
         nrm = np.linalg.norm(vect) #Get the norm (we won't use this one but is generally useful for building a stopping condition)
-        for _ in range(self.Zsim): #Perform 50 iterations (heuristic stopping conditions)
+        for _ in range(self.zsim): #Perform 50 iterations (heuristic stopping conditions)
             vect = mat.dot(vect) #Multiply the matrix and the vector
             nrm = np.linalg.norm(vect) #Normalize the result
             vect = vect/nrm
         return(vect)
     
 
+    """
+    Perform the power method for eigenvalue estimation.
+    
+    :param mat: The matrix for eigenvalue estimation.
+    :param dim: The dimensionality of the matrix.
+    :return: The estimated eigenvector.
+    """
     def loop(self, x):
     
-        ind = self.discretize(x,  self.Zdim, self.Zmin, self.Zstep) #Discretize the state
+        ind = self.discretize(x,  self.zdim, self.zmin, self.zstep) #Discretize the state
         pf = self.passive_dynamics[ind[0],ind[1]] #Get the pf corresponding to the passive dynamics
         pf_1D = self.unravelPF(pf) #Unravel it
         pf_weighted = pf_1D*self.z #Calculate the actual transition pf using z and the passive dynamics
@@ -193,7 +246,7 @@ class KLC_controller:
 
 print("Prova del sistema KLC")
 
-klc_controller = KLC_controller([16, 16], 1)
+klc_controller = ControllerKLC([16, 16], 1)
 x, y, time = klc_controller.update()
 
 # Crea una griglia di subplot con 1 riga e 2 colonne

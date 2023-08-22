@@ -5,8 +5,19 @@ from cost_cache import *
 from tf import transformations as t
 from model import *
 
+"""
+Model: A class representing the dynamic model for the system.
+
+This class defines a continuous-time model for the robot's dynamics, including state variables, control variables,
+and time-varying parameters. It sets up the state equations and provides a method to retrieve the model.
+"""
 class Model():
 
+    """
+    Initialize the Model class by defining the dynamic model.
+    
+    :param self: The instance of the class.
+    """
     def __init__(self):
 
         model_type = 'continuous'  # either 'discrete' or 'continuous'
@@ -31,5 +42,11 @@ class Model():
         self.model.set_rhs('theta', self.w)
         self.model.setup()
 
+    """
+    Get the defined dynamic model.
+    
+    :param self: The instance of the class.
+    :return: The dynamic model.
+    """
     def get_model(self):
         return self.model

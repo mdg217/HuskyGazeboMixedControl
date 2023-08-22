@@ -1,7 +1,5 @@
 import rospy
 from geometry_msgs.msg import Twist
-import tf
-import tf2_ros
 from tf import transformations as t
 import numpy as np
 from utility import *
@@ -13,9 +11,20 @@ from cost_cache import *
 from model import *
 from obstacle import *
 
-class MPC_controller:
+"""
+ControllerMPC: A class implementing a Model Predictive Control (MPC) controller for a robot's motion.
+"""
 
-    def tvp_fun(self, t_now):
+
+class ControllerMPC:
+
+    """
+    A method to calculate the time-varying parameters (TVP) for the MPC controller.
+    
+    :param self: The instance of the class.
+    :return: The time-varying parameters for the controller.
+    """
+    def tvp_fun(self):
         for k in range(21):
                 x, y = self.cache.next_target(self.index)
                 self.tvp_template['_tvp', k, 'xd'] = x
@@ -23,7 +32,12 @@ class MPC_controller:
 
         return self.tvp_template
 
-
+    """
+    Initialize the MPC controller with initial state.
+    
+    :param self: The instance of the class.
+    :param init_state: The initial state of the robot.
+    """
     def __init__(self, init_state):
 
         self.cache = CostCache()
@@ -70,6 +84,11 @@ class MPC_controller:
         self.mpc.set_initial_guess()
 
 
+    """
+    Update the controller and apply the calculated control input to the robot.
+    
+    :param self: The instance of the class.
+    """
     def update(self):
 
         # Get the robot's current states (position and orientation)
@@ -100,6 +119,12 @@ class MPC_controller:
 
     """ METHOD FOR THE __init__ and update Method (utility)"""
 
+
+    """
+    Set the bounds for states and control inputs for the MPC controller.
+    
+    :param self: The instance of the class.
+    """
     def set_bounds(self):
         # Set lower bounds on states
         self.mpc.bounds['lower', '_x', 'x'] = 0
@@ -120,6 +145,11 @@ class MPC_controller:
         self.mpc.bounds['upper', '_u', 'w'] = 1
 
 
+    """
+    Set the cost function for the MPC controller.
+    
+    :param self: The instance of the class.
+    """
     def set_cost_function(self):       
 
         mterm = (self.model.x['x'] - self.model.tvp['xd'])**2 + (self.model.x['y'] - self.model.tvp['yd'])**2 

@@ -47,6 +47,5 @@ for index in range(2):
             simulation_with_random[sim+2000*index, iteration] = np.array([xk, yk])
 
 
-
 np.save('data.npy', simulation_with_random)
 

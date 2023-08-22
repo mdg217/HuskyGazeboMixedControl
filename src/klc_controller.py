@@ -7,6 +7,7 @@ from obstacle import *
 import rospy
 from Plants.uniform_plant import *
 from Plants.linearized_plant import *
+from Plants.gaussian_linearized_plant import *
 
 class KLC_controller:
 
@@ -52,7 +53,9 @@ class KLC_controller:
             self.passive_dynamics = uniform_plant().get_plant(self.Zdiscr[0])
             print(type(self.passive_dynamics)) 
         elif mode == 1:
-            self.passive_dynamics = linearized_plant().get_plant(2)       
+            self.passive_dynamics = linearized_plant().get_plant(2)
+        elif mode == 2:
+            self.passive_dynamics = gaussian_linearized_plant().get_plant(2)       
 
 
         self.stateVect = np.zeros((self.Zdiscr[0]**2, 2))
@@ -183,8 +186,7 @@ class KLC_controller:
         pf_1D = self.unravelPF(pf) #Unravel it
         pf_weighted = pf_1D*self.z #Calculate the actual transition pf using z and the passive dynamics
         S = np.sum(pf_weighted) #Normalize
-
-        pf_weighted = pf_weighted/S #probabilities contain NaN ERRORE SPESSO USCITO FUORI forse perché la somma delle probabilità non è 1
+        pf_weighted = pf_weighted/S #probabilities contain NaN ERRORE SPESSO USCITO FUORI forse perché non si riesce a minimizzare la funzione di costo a causa di qualche limite raggiunto
         ind = np.random.choice(range(self.Zdiscr[0]**2), p=pf_weighted) #Get the new (enumerated) state index using the calculated dynamics
         newState = self.stateVect[ind] #Get the new state from the state vector
         return(newState)

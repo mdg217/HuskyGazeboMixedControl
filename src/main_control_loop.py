@@ -6,7 +6,7 @@ from cost_cache import *
 cache = CostCache()
 
 target = [16, 16]
-klc = ControllerKLC(target, 1)
+klc = ControllerKLC(target, 0)
 x, y, time = klc.update()
 klc.export_metrics(x, y, time)
 cache.set_next_target(x, y)

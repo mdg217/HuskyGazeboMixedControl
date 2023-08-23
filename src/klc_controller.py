@@ -251,7 +251,7 @@ class ControllerKLC:
 
 print("Prova del sistema KLC")
 
-klc_controller = ControllerKLC([16, 16], 1)
+klc_controller = ControllerKLC([16, 16], 0)
 x, y, time = klc_controller.update()
 print(x[-1])
 print(y[-1])

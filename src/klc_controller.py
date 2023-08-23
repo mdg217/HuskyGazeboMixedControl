@@ -51,7 +51,7 @@ class ControllerKLC:
         self.zdiscr = [37, 37]
 
         #Number of iterations for the simulations
-        self.zsim = 30
+        self.zsim = 50
 
         #Duration of the simulation
         self.duration = 100
@@ -182,7 +182,7 @@ class ControllerKLC:
         regularization_term = 0.1 * distance_to_goal  # Adjust the scaling factor as needed
 
         # Include the regularization term in the overall cost calculation 
-        return 0.07*(state[0] - self.xd) ** 2 + 0.07*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
+        return 0.05*(state[0] - self.xd) ** 2 + 0.05*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
     
         """# Calculate the distance from the goal and introduce a regularization term for uniform and 5TypeSimulation
         distance_to_goal = np.sqrt((state[0] - self.xd) ** 2 + (state[1] - self.yd) ** 2)
@@ -240,14 +240,21 @@ class ControllerKLC:
         pf_weighted = pf_1D*self.z #Calculate the actual transition pf using z and the passive dynamics
         S = np.sum(pf_weighted) #Normalize
         pf_weighted = pf_weighted/S #probabilities contain NaN ERRORE SPESSO USCITO FUORI forse perché non si riesce a minimizzare la funzione di costo a causa di qualche limite raggiunto
-        ind = np.random.choice(range(self.Zdiscr[0]**2), p=pf_weighted) #Get the new (enumerated) state index using the calculated dynamics
+        ind = np.random.choice(range(self.zdiscr[0]**2), p=pf_weighted) #Get the new (enumerated) state index using the calculated dynamics
         newState = self.stateVect[ind] #Get the new state from the state vector
         return(newState)
+    
+
+    def export_metrics(self, x, y, time):
+        np.save("klc_gaussian_results_from_planning", np.array([x, y, time]))
+
 
 print("Prova del sistema KLC")
 
 klc_controller = ControllerKLC([16, 16], 1)
 x, y, time = klc_controller.update()
+print(x[-1])
+print(y[-1])
 
 # Crea una griglia di subplot con 1 riga e 2 colonne
 fig, axs = plt.subplots(1, 1, figsize=(10, 5))

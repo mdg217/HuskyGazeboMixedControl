@@ -24,7 +24,12 @@ class ControllerMPC:
     :param self: The instance of the class.
     :return: The time-varying parameters for the controller.
     """
-    def tvp_fun(self):
+    def tvp_fun(self, time):
+
+        print(self.index)
+        if self.index >= 100:  #the result can't reach a number of waypoint after the simulation dimension
+             self.index = 99
+
         for k in range(21):
                 x, y = self.cache.next_target(self.index)
                 self.tvp_template['_tvp', k, 'xd'] = x
@@ -89,12 +94,11 @@ class ControllerMPC:
     
     :param self: The instance of the class.
     """
-    def update(self):
+    def update(self, target):
 
         # Get the robot's current states (position and orientation)
         actual_position = get_actual_position(self.init_position)
         states = numpy.array([actual_position[0], actual_position[1], actual_position[5]]).reshape(-1, 1)
-        print(states)
 
         #Implement disturbance on the model
         states_noise = np.array(add_noise_to_states(states)).reshape(-1,1)
@@ -106,6 +110,12 @@ class ControllerMPC:
         if u[0] <= 0.5 and u[1] <= 0.5:
             self.index+=1
 
+        print(states[0])
+        print(target[0])
+
+        if abs(states[0]-target[0])<=0.1 and abs(states[1]-target[1])<=0.1:
+            return states[0], states[1], 1
+
         # Set the linear and angular velocities for the robot's motion
         self.move_cmd.linear.x = u[0] 
         self.move_cmd.angular.z = u[1]
@@ -115,6 +125,8 @@ class ControllerMPC:
 
         # Sleep according to the defined rate
         self.rate.sleep()
+        
+        return states[0], states[1], 0
 
 
     """ METHOD FOR THE __init__ and update Method (utility)"""
@@ -152,7 +164,7 @@ class ControllerMPC:
     """
     def set_cost_function(self):       
 
-        mterm = (self.model.x['x'] - self.model.tvp['xd'])**2 + (self.model.x['y'] - self.model.tvp['yd'])**2 
+        mterm = 2*(self.model.x['x'] - self.model.tvp['xd'])**2 + 2*(self.model.x['y'] - self.model.tvp['yd'])**2 
         lterm = mterm + 1/2*self.model.u['v']**2 + 1/2*self.model.u['w']**2 
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)

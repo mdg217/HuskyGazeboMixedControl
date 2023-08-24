@@ -28,8 +28,8 @@ class Obstacle:
 
         self.get_pose_from_gazebo()
 
-        for obs in self.obs_odom:
-            print(obs)
+        """for obs in self.obs_odom:
+            print(obs)"""
 
 
     """

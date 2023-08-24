@@ -4,6 +4,7 @@ from scipy.stats import norm
 from math import log
 import os
 from obstacle import *
+import time
 import rospy
 from Plants.uniform_plant import *
 from Plants.linearized_plant import *
@@ -48,7 +49,7 @@ class ControllerKLC:
         self.zstep = [0.5, 0.5]
 
         #Amount of discrete bins
-        self.zdiscr = [37, 37]
+        self.zdiscr = [36, 36]
 
         #Number of iterations for the simulations
         self.zsim = 50
@@ -96,8 +97,11 @@ class ControllerKLC:
                 ind1 = i*self.zdiscr[0] + j
                 Prob[ind1] = self.unravelPF(pf)
 
-
+        start_time = time.time()  # Registra il tempo di inizio
         self.z = self.powerMethod(diagMinusQ@Prob, self.zdiscr[0]**2) 
+        end_time = time.time()  # Registra il tempo di fine
+        execution_time = end_time - start_time  # Calcola il tempo di esecuzione
+        print(f"Tempo di esecuzione: {execution_time} secondi")
     
     """
     Update the controller's behavior based on the current state.
@@ -214,15 +218,27 @@ class ControllerKLC:
     :param dim: The dimensionality of the matrix.
     :return: The estimated eigenvector.
     """
-    def powerMethod(self, mat, dim):
-    
-        vect = np.ones(dim) #Initial guess
-        nrm = np.linalg.norm(vect) #Get the norm (we won't use this one but is generally useful for building a stopping condition)
-        for _ in range(self.zsim): #Perform 50 iterations (heuristic stopping conditions)
-            vect = mat.dot(vect) #Multiply the matrix and the vector
-            nrm = np.linalg.norm(vect) #Normalize the result
-            vect = vect/nrm
-        return(vect)
+    def powerMethod(self, mat, dim, epsilon=1e-6):
+        vect = np.ones(dim)
+        nrm = np.linalg.norm(vect)
+        
+        for i in range(self.zsim):
+            prev_vect = vect.copy()  # Salva l'autovettore dell'iterazione precedente
+            vect = mat.dot(vect)
+            nrm = np.linalg.norm(vect)
+            vect = vect / nrm
+            
+            """# Calcola la differenza tra l'autovettore attuale e quello precedente
+            diff = np.linalg.norm(vect - prev_vect)
+            
+            # Verifica la condizione di arresto
+            if diff < epsilon:
+                break"""
+            
+        print(np.shape(vect))
+        
+        return vect
+
     
 
     """

@@ -65,7 +65,7 @@ a2 = [0, 1]
 for index in range(2):
     rover = linear_model(a1[index], a2[index])
     for sim in range(2000):
-        rover.set_x0([random.uniform(0, 18), random.uniform(0, 18)])
+        rover.set_x0([random.uniform(0, 17), random.uniform(0, 17)])
         for iteration in range(50):
             uk = random.uniform(-1, 1)
             xk, yk = rover.make_step(uk)

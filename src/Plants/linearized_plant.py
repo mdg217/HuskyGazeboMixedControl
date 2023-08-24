@@ -20,6 +20,7 @@ class linearized_plant:
 
         # Load system data from a file
         self.sysData = np.load('/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/2TypeSimulation.npy')
+        print(np.shape(self.sysData))
 
         # Set up parameters and dimensions
         self.Zdim = dim
@@ -64,6 +65,7 @@ class linearized_plant:
                 Y = Zhist[i]
 
                 Zind = self.discretize(Z)  # Find the indexes
+
                 Yind = self.discretize(Y)
 
                 fullInd = Yind + Zind  # Get the index of the joint variable Z,Y

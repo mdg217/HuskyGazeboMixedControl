@@ -2,11 +2,12 @@ import rospy
 from mpc_controller import *
 from klc_controller import *
 from cost_cache import *
+from klc_controller_online import *
 
 cache = CostCache()
 
 target = [16, 16]
-klc = ControllerKLC(target, 0)
+klc = ControllerKLCOnline(target, 1)
 x, y, time = klc.update()
 klc.export_metrics(x, y, time)
 cache.set_next_target(x, y)
@@ -28,4 +29,4 @@ while not rospy.is_shutdown():
         break
 
 print("salvataggio dei risultati nella simulazione!")
-np.save("klc_gaussian_results_from_simulation", np.array([mpc_x_history, mpc_y_history, mpc_t_history]))
+np.save("klc_vision_linear_results_from_simulation", np.array([mpc_x_history, mpc_y_history, mpc_t_history]))

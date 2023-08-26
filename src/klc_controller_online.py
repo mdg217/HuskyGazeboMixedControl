@@ -2,9 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 from math import log
-import os
 from obstacle import *
-import time
 import rospy
 from Plants.uniform_plant import *
 from Plants.linearized_plant import *
@@ -12,9 +10,10 @@ from Plants.trajectory_based_plant import *
 
 """
 ControllerKLC: A class implementing a Kinematic Linearization Controller (KLC) for robot motion planning.
+
 This class defines methods to initialize the controller and update its behavior based on robot states.
 """
-class ControllerKLCWoodbury:
+class ControllerKLCOnline:
 
     """
     Update the controller's behavior based on the current state.
@@ -58,15 +57,16 @@ class ControllerKLCWoodbury:
 
         # Creazione del vettore 4D inizializzato con zeri
 
-        self.passive_dynamics0 = np.zeros((self.zdiscr[0], self.zdiscr[0], self.zdiscr[0], self.zdiscr[0]))
         self.passive_dynamics = np.zeros((self.zdiscr[0], self.zdiscr[0], self.zdiscr[0], self.zdiscr[0]))
 
-        self.passive_dynamics0 = uniform_plant().get_plant(self.zdiscr[0])
-        print(np.shape(self.passive_dynamics))
+        if mode == 0:
+            self.passive_dynamics = uniform_plant().get_plant(self.zdiscr[0])
+            print(type(self.passive_dynamics)) 
+        elif mode == 1:
+            self.passive_dynamics = linearized_plant().get_plant(2)
+        elif mode == 2:
+            self.passive_dynamics = trajectory_based_plant().get_plant(2, uniform_plant().get_plant(self.zdiscr[0]))       
 
-        self.passive_dynamics = linearized_plant().get_plant(2)
-        
-        print(np.shape(self.passive_dynamics0))    
 
         self.stateVect = np.zeros((self.zdiscr[0]**2, 2))
 
@@ -81,9 +81,6 @@ class ControllerKLCWoodbury:
                 # Assign the angle and speed values to the state vector
                 self.stateVect[ind] = [x, y] 
 
-        for x in self.stateVect:
-            print(x)
-
         self.Prob = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2))
 
         for i in range(self.zdiscr[0]):
@@ -91,7 +88,18 @@ class ControllerKLCWoodbury:
                 pf = self.passive_dynamics[i,j]
                 ind1 = i*self.zdiscr[0] + j
                 self.Prob[ind1] = self.unravelPF(pf)
-                
+
+        self.z = np.array((np.shape(self.Prob))[0])
+
+        diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
+
+        for i in range(self.zdiscr[0]**2):
+            #Build the diagonal matrix with the exponential of the opposite of the cost
+            diagMinusQ[i,i] = np.exp(-self.cost(self.stateVect[i]))
+                                     
+        self.z = self.powerMethod(diagMinusQ@self.Prob, self.zdiscr[0]**2) 
+
+    
     """
     Update the controller's behavior based on the current state.
     
@@ -106,30 +114,13 @@ class ControllerKLCWoodbury:
         #Task:  obtain simulations for different initial conditions (say, 5 different initial conditions). For each of these, run 50 simulations.
 
         for j in range(self.zsim): #Perform 50 simulations
-            print("Simulation number: " + str(j))
-
-            #Execution for the first time power-method
-            diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
-
-            for i in range(self.zdiscr[0]**2):
-                #Build the diagonal matrix with the exponential of the opposite of the cost
-                diagMinusQ[i,i] = np.exp(-self.cost(self.stateVect[i]))
-
-            self.z = self.powerMethod(diagMinusQ@self.Prob, self.zdiscr[0]**2) 
-
+            print("simulazione numero: " + str(j))
             hist = [[0,0]]*nSteps
             state = [0, 0] #Initialize the pendulum <------------
             for i in range(nSteps): #For each step
                 hist[i]=state #Log the state
                 state = self.loop(state) #Sample the new state
 
-                newDiagQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
-
-                for i in range(self.zdiscr[0]**2):
-                    #Build the diagonal matrix with the exponential of the opposite of the cost
-                    newDiagQ[i,i] = np.exp(-self.cost(self.stateVect[i]))
-
-                self.z = self.woodburyMethod(self.Prob, newDiagQ, 1000)
 
             fullH[j] = [x[0] for x in hist]
             fullHv[j] = [x[1] for x in hist]
@@ -152,6 +143,8 @@ class ControllerKLCWoodbury:
 
     
     # Utility methods for init and update methods
+
+
     """
     Discretize the continuous state variables.
     
@@ -187,7 +180,6 @@ class ControllerKLCWoodbury:
         for obs in self.obstacles.get_obs():
             
             if(self.is_obstacle_in_fov(state[0], state[1], obs[0], obs[1]) == True):
-                print("ho trovato un nuovo ostacolo")
                 xterm = ((state[0] - obs[0]) / sx) ** 2
                 yterm = ((state[1] - obs[1]) / sy) ** 2
                 obsTerm += k * np.exp(-0.5 * (xterm + yterm))
@@ -235,7 +227,7 @@ class ControllerKLCWoodbury:
                 res[i*self.zdiscr[0]+j] = pf[i][j]
         return(res)
     
-
+    
     """
     Perform the power method for eigenvalue estimation.
     
@@ -261,43 +253,8 @@ class ControllerKLCWoodbury:
                 break"""
         
         return vect
+
     
-    
-    #Chi sono P e P0 in questo caso?
-    def woodburyMethod(self, P0, Q, j):
-        L0 = Q-P0
-        D0 = np.linalg.inv(L0)
-        
-        P = P0
-        P[j,j] = 1
-        L = Q-P
-
-        ds = np.where(np.sum(np.abs(L - L0), axis=1) != 0)[0]
-        print(ds)
-        e = np.zeros((P.shape[0], 1))
-        e[ds] = 1 # 1296
-
-        d = L[ds,:] - L0[ds,:]
-
-        terms = np.diag(P) == 1
-
-        p = P[:, terms]
-        p[terms, :] = 0
-        m0 = np.dot(D0, e)
-
-        z0 = np.dot(D0, p)
-    
-        alpha = 1 / (1 + np.dot(d, m0))
-
-        zc = z0 - alpha*m0 * np.dot(d, z0)
-        
-        z = zc * Q[terms, terms]
-        
-        z = z.flatten()
-        z = np.abs(z)
-
-        return z
-
 
     """
     Perform the power method for eigenvalue estimation.
@@ -320,12 +277,12 @@ class ControllerKLCWoodbury:
     
 
     def export_metrics(self, x, y, time):
-        np.save("klc_gaussian_results_from_planning", np.array([x, y, time]))
+        np.save("klc_vision_linear_results_from_planning", np.array([x, y, time]))
 
 
 print("Prova del sistema KLC")
 
-klc_controller = ControllerKLCWoodbury([16, 16], 1)
+klc_controller = ControllerKLCOnline([16, 16], 2)
 x, y, time = klc_controller.update()
 print(x[-1])
 print(y[-1])

@@ -113,7 +113,7 @@ class ControllerMPC:
         print(states[0])
         print(target[0])
 
-        if abs(states[0]-target[0])<=0.1 and abs(states[1]-target[1])<=0.1:
+        if abs(states[0]-target[0])<=0.2 and abs(states[1]-target[1])<=0.2:
             return states[0], states[1], 1
 
         # Set the linear and angular velocities for the robot's motion

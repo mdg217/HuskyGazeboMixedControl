@@ -28,8 +28,8 @@ def interpolate_waypoints(waypoints, new_length):
 
     return interpolated_waypoints
 
-planning = extract_data_from_dataset("/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/klc_gaussian_results_from_planning.npy")
-simulation = extract_data_from_dataset("/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/klc_gaussian_results_from_simulation.npy")
+planning = extract_data_from_dataset("/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/simulation_final/klc_vision_linear_results_from_planning.npy")
+simulation = extract_data_from_dataset("/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/simulation_final/klc_vision_linear_results_from_simulation.npy")
 print("Time to get the target is: " + str(simulation[2][-1]))
 
 # Determina il numero di punti desiderato per l'interpolazione
@@ -46,8 +46,8 @@ for x1, x2 in zip(simulation[1], interpolated_waypoints[1]):
 print(calculate_mean_position_error(np.array([simulation[0], simulation[1]]), interpolated_waypoints))
 
 # Creazione del grafico
-plt.plot(interpolated_waypoints[0], interpolated_waypoints[1], marker='o', label='Planning', zorder=1)
-plt.plot(simulation[0], simulation[1], marker='o', label='Simulation', zorder=0)
+plt.plot(interpolated_waypoints[0], interpolated_waypoints[1], marker='o', label='Planning', zorder=0)
+plt.plot(simulation[0], simulation[1], marker='o', label='Simulation', zorder=1)
 
 # Aggiunta del punto in primo piano
 plt.scatter(16, 16, color='green', marker='o', label='Final Target', s=100, zorder=2)

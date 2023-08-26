@@ -4,11 +4,10 @@ from scipy.stats import norm
 from math import log
 import os
 from obstacle import *
-import time
 import rospy
 from Plants.uniform_plant import *
 from Plants.linearized_plant import *
-from Plants.gaussian_linearized_plant import *
+from Plants.trajectory_based_plant import *
 
 """
 ControllerKLC: A class implementing a Kinematic Linearization Controller (KLC) for robot motion planning.
@@ -67,7 +66,7 @@ class ControllerKLC:
         elif mode == 1:
             self.passive_dynamics = linearized_plant().get_plant(2)
         elif mode == 2:
-            self.passive_dynamics = gaussian_linearized_plant().get_plant(2)       
+            self.passive_dynamics = trajectory_based_plant().get_plant(2, uniform_plant().get_plant(self.zdiscr[0]))       
 
 
         self.stateVect = np.zeros((self.zdiscr[0]**2, 2))
@@ -97,11 +96,7 @@ class ControllerKLC:
                 ind1 = i*self.zdiscr[0] + j
                 Prob[ind1] = self.unravelPF(pf)
 
-        start_time = time.time()  # Registra il tempo di inizio
         self.z = self.powerMethod(diagMinusQ@Prob, self.zdiscr[0]**2) 
-        end_time = time.time()  # Registra il tempo di fine
-        execution_time = end_time - start_time  # Calcola il tempo di esecuzione
-        print(f"Tempo di esecuzione: {execution_time} secondi")
     
     """
     Update the controller's behavior based on the current state.
@@ -188,13 +183,6 @@ class ControllerKLC:
         # Include the regularization term in the overall cost calculation 
         return 0.05*(state[0] - self.xd) ** 2 + 0.05*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
     
-        """# Calculate the distance from the goal and introduce a regularization term for uniform and 5TypeSimulation
-        distance_to_goal = np.sqrt((state[0] - self.xd) ** 2 + (state[1] - self.yd) ** 2)
-        regularization_term = 0.01 * distance_to_goal  # Adjust the scaling factor as needed
-
-        # Include the regularization term in the overall cost calculation
-        return 0.1*(state[0] - self.xd) ** 2 + 0.1*(state[1] - self.yd) ** 2 + obsTerm + regularization_term"""
-
     
     """
     Unravel a 2D passive dynamics array into a 1D array.
@@ -262,12 +250,12 @@ class ControllerKLC:
     
 
     def export_metrics(self, x, y, time):
-        np.save("klc_gaussian_results_from_planning", np.array([x, y, time]))
+        np.save("klc_linear_results_from_planning", np.array([x, y, time]))
 
 
 print("Prova del sistema KLC")
 
-klc_controller = ControllerKLC([16, 16], 0)
+klc_controller = ControllerKLC([16, 16], 2)
 x, y, time = klc_controller.update()
 print(x[-1])
 print(y[-1])

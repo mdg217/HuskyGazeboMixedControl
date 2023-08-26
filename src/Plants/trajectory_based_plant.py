@@ -1,26 +1,22 @@
-"""
-linearized_plant: A class representing a linearized plant model.
-
-This class defines a linearized plant model that computes conditional probabilities based on a given dataset.
-"""
-
 import numpy as np
 from scipy.stats import multivariate_normal
 
-class linearized_plant:
+class trajectory_based_plant():
 
-    """
-    Generate the conditional probability matrix for the linearized plant model.
-    
-    :param self: The instance of the class.
-    :param dim: The dimensionality of the state space.
-    :return: The conditional probability matrix.
-    """
-    def get_plant(self, dim):
+    def get_plant(self, dim, uniform):
 
-        # Load system data from a file
-        self.sysData = np.load('/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/2TypeSimulation.npy')
-        print(np.shape(self.sysData))
+        trackData = np.load('/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/simulation_final/klc_vision_linear_results_from_simulation.npy')
+        self.conditional = uniform
+
+        print(trackData[0][-1])
+
+        print(np.shape(self.conditional))
+
+        #Reshaping the data of the tracking
+        transposed_data = np.transpose(trackData)         
+        #print(np.shape(transposed_data))
+        self.sysData = np.array([transposed_data])
+
 
         # Set up parameters and dimensions
         self.Zdim = dim
@@ -28,18 +24,20 @@ class linearized_plant:
         self.Zstep = [0.5, 0.5]
         self.Zdiscr = [37, 37]
 
-        # Compute the joint and conditional probability matrices
         (full, Y) = self.getJointPMFs()
         cond = self.getConditional(full, Y)
 
-        return cond
+        print(np.shape(cond))
 
-    """
-    Discretize the continuous state space.
-    
-    :param Z: Continuous state variables.
-    :return: Discretized state variables.
-    """
+        indices = np.where(cond != 0)
+        non_zero_positions = list(zip(*indices))
+
+        for index in non_zero_positions:
+            self.conditional[index] = cond[index] + abs(np.random.normal(0, 0.4))                        
+
+        return self.conditional
+
+
     def discretize(self, Z):
         res = [0] * self.Zdim  # n-dimensional index
         for i in range(self.Zdim):  # For each dimension
@@ -47,13 +45,7 @@ class linearized_plant:
             ind = int((elt - self.Zmin[i]) // self.Zstep[i])  # Discretize
             res[i] = ind
         return tuple(res)  # Return as tuple for array indexing
-
-    """
-    Calculate the joint and marginal probability matrices.
     
-    :param self: The instance of the class.
-    :return: Joint and marginal probability matrices.
-    """
     def getJointPMFs(self):
 
         fullJoint = np.zeros(self.Zdiscr * 2)  # p(Z,Y)
@@ -76,15 +68,8 @@ class linearized_plant:
         Yjoint = Yjoint / np.sum(Yjoint)
 
         return fullJoint, Yjoint
-
-    """
-    Calculate the conditional probability matrix.
     
-    :param self: The instance of the class.
-    :param fullJoint: Joint probability matrix.
-    :param Yjoint: Marginal probability matrix for Y.
-    :return: Conditional probability matrix.
-    """
+    
     def getConditional(self, fullJoint, Yjoint):
 
         fullDiscr = 2 * self.Zdiscr
@@ -95,7 +80,21 @@ class linearized_plant:
                 conditional[index] = 0
             else:
                 conditional[index] = fullJoint[index] / Yjoint[Yind]  # Division
+
         return conditional
 
 
-p = linearized_plant().get_plant(2)
+"""p = trajectory_based_plant().get_plant(2, )
+
+# Creiamo un elenco per salvare i valori non nulli
+non_zero_values = []
+
+# Itera attraverso gli elementi dell'array 'p'
+for x in p:
+    non_zero_values.append(x)
+
+# Salva i valori non nulli in un file (ad esempio, 'non_zero_values.txt')
+with open('non_zero_values.txt', 'w') as f:
+    for value in non_zero_values:
+        f.write(str(value) + '\n')"""
+

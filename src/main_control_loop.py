@@ -1,13 +1,12 @@
 import rospy
 from mpc_controller import *
-from klc_controller import *
 from cost_cache import *
-from klc_controller_online import *
+from klc_controller import *
 
 cache = CostCache()
 
-target = [16, 16]
-klc = ControllerKLCOnline(target, 1)
+target = [8, 8]
+klc = ControllerKLC(target, 0)
 x, y, time = klc.update()
 klc.export_metrics(x, y, time)
 cache.set_next_target(x, y)

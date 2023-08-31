@@ -110,9 +110,6 @@ class ControllerMPC:
         if u[0] <= 0.5 and u[1] <= 0.5:
             self.index+=1
 
-        print(states[0])
-        print(target[0])
-
         if abs(states[0]-target[0])<=0.2 and abs(states[1]-target[1])<=0.2:
             return states[0], states[1], 1
 
@@ -125,6 +122,7 @@ class ControllerMPC:
 
         # Sleep according to the defined rate
         self.rate.sleep()
+        #self.cache.set_actual_state(states[0], states[1])
         
         return states[0], states[1], 0
 

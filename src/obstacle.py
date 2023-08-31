@@ -12,7 +12,7 @@ This class retrieves obstacle poses from Gazebo and processes them to provide ob
 
 class Obstacle:
 
-    NOBSTACLES = 9
+    NOBSTACLES = 6
 
     """
     Initialize the Obstacle class and retrieve obstacle poses from Gazebo.

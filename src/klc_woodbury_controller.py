@@ -54,20 +54,11 @@ class ControllerKLCWoodbury:
         self.zsim = 15
 
         #Duration of the simulation
-        self.duration = 100
+        self.duration = 80
 
         # Creazione del vettore 4D inizializzato con zeri
-
-        self.passive_dynamics0 = np.zeros((self.zdiscr[0], self.zdiscr[0], self.zdiscr[0], self.zdiscr[0]))
-        self.passive_dynamics = np.zeros((self.zdiscr[0], self.zdiscr[0], self.zdiscr[0], self.zdiscr[0]))
-
-        self.passive_dynamics0 = uniform_plant().get_plant(self.zdiscr[0])
-        print(np.shape(self.passive_dynamics))
-
-        self.passive_dynamics = linearized_plant().get_plant(2)
+        self.passive_dynamics = trajectory_based_plant().get_plant(2, uniform_plant().get_plant(36))
         
-        print(np.shape(self.passive_dynamics0))    
-
         self.stateVect = np.zeros((self.zdiscr[0]**2, 2))
 
         for i in range(self.zdiscr[0]):
@@ -81,9 +72,6 @@ class ControllerKLCWoodbury:
                 # Assign the angle and speed values to the state vector
                 self.stateVect[ind] = [x, y] 
 
-        for x in self.stateVect:
-            print(x)
-
         self.Prob = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2))
 
         for i in range(self.zdiscr[0]):
@@ -91,6 +79,12 @@ class ControllerKLCWoodbury:
                 pf = self.passive_dynamics[i,j]
                 ind1 = i*self.zdiscr[0] + j
                 self.Prob[ind1] = self.unravelPF(pf)
+        
+        self.diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
+
+        for i in range(self.zdiscr[0]**2):
+            #Build the diagonal matrix with the exponential of the opposite of the cost
+            self.diagMinusQ[i,i] = np.exp(-self.cost(self.stateVect[i]))
                 
     """
     Update the controller's behavior based on the current state.
@@ -102,34 +96,56 @@ class ControllerKLCWoodbury:
         fullH = np.zeros((self.zsim,self.duration))
         fullHv = np.zeros((self.zsim,self.duration))
         nSteps = self.duration
+        #diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
+        newdiagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
+        actions = 0.5*np.array([(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1)])
+        possible_states = []
+        oldz = None
 
         #Task:  obtain simulations for different initial conditions (say, 5 different initial conditions). For each of these, run 50 simulations.
 
-        for j in range(self.zsim): #Perform 50 simulations
-            print("Simulation number: " + str(j))
-
-            #Execution for the first time power-method
-            diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
-
-            for i in range(self.zdiscr[0]**2):
-                #Build the diagonal matrix with the exponential of the opposite of the cost
-                diagMinusQ[i,i] = np.exp(-self.cost(self.stateVect[i]))
-
-            self.z = self.powerMethod(diagMinusQ@self.Prob, self.zdiscr[0]**2) 
-
+        for j in range(self.zsim): #Perform simulations
+            print("simulazione numero: " + str(j))
             hist = [[0,0]]*nSteps
             state = [0, 0] #Initialize the pendulum <------------
             for i in range(nSteps): #For each step
+
+                #compute new possible states from statevect using the current state
+                
+                #Verificare prima quali stati sono disponibili a partire da state per andare in state + action nella 
+                #compute di index of the next states
+                for action in actions:
+                    is_good_state = state + action
+                    #print(is_good_state)
+                    if 0 <= is_good_state[0] < self.zdiscr[0]*self.zstep[0] and 0 <= is_good_state[1] < self.zdiscr[1]*self.zstep[1]:
+                        state_index = 0
+                        for s in self.stateVect:
+                            if s[0] == is_good_state[0] and s[1] == is_good_state[1]:
+                                #print(s)
+                                possible_states.append(state_index)
+                                #print(possible_states)
+                            state_index+=1
+
+                for k in possible_states:
+                    #Build the diagonal matrix with the exponential of the opposite of the cost
+                    newdiagMinusQ[k,k] = np.exp(-self.cost(self.stateVect[k]))
+
+                if i == 0:
+                    self.z = self.powerMethod(self.diagMinusQ@self.Prob, self.zdiscr[0]**2)
+                    oldz = self.z
+
                 hist[i]=state #Log the state
                 state = self.loop(state) #Sample the new state
+                
+                current_state = 0
+                for s in self.stateVect:
+                    if s[0] == state[0] and s[1] == state[1]:
+                        break
+                    current_state+=1
 
-                newDiagQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
+                self.z = self.woodburyMethod(self.Prob, self.diagMinusQ, self.diagMinusQ, possible_states, oldz)
 
-                for i in range(self.zdiscr[0]**2):
-                    #Build the diagonal matrix with the exponential of the opposite of the cost
-                    newDiagQ[i,i] = np.exp(-self.cost(self.stateVect[i]))
-
-                self.z = self.woodburyMethod(self.Prob, newDiagQ, 1000)
+                possible_states = []
 
             fullH[j] = [x[0] for x in hist]
             fullHv[j] = [x[1] for x in hist]
@@ -150,6 +166,7 @@ class ControllerKLCWoodbury:
 
         return [meanx, meany, time]
 
+    
     
     # Utility methods for init and update methods
     """
@@ -177,7 +194,7 @@ class ControllerKLCWoodbury:
     :return: The calculated cost.
     """
     def cost(self, state):
-        k = 30
+        k = 20
         sx = 0.7
         sy = 0.7
 
@@ -187,25 +204,15 @@ class ControllerKLCWoodbury:
         for obs in self.obstacles.get_obs():
             
             if(self.is_obstacle_in_fov(state[0], state[1], obs[0], obs[1]) == True):
-                print("ho trovato un nuovo ostacolo")
+                #print("ho trovato un nuovo ostacolo")
                 xterm = ((state[0] - obs[0]) / sx) ** 2
                 yterm = ((state[1] - obs[1]) / sy) ** 2
                 obsTerm += k * np.exp(-0.5 * (xterm + yterm))
 
-        # Calculate the distance from the goal and introduce a regularization term for 2TypeSimulation
-        distance_to_goal = np.sqrt((state[0] - self.xd) ** 2 + (state[1] - self.yd) ** 2)
-        regularization_term = 0.1 * distance_to_goal  # Adjust the scaling factor as needed
 
         # Include the regularization term in the overall cost calculation 
-        return 0.05*(state[0] - self.xd) ** 2 + 0.05*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
+        return 0.05*(state[0] - self.xd) ** 2 + 0.05*(state[1] - self.yd) ** 2 + obsTerm 
     
-        """# Calculate the distance from the goal and introduce a regularization term for uniform and 5TypeSimulation
-        distance_to_goal = np.sqrt((state[0] - self.xd) ** 2 + (state[1] - self.yd) ** 2)
-        regularization_term = 0.01 * distance_to_goal  # Adjust the scaling factor as needed
-
-        # Include the regularization term in the overall cost calculation
-        return 0.1*(state[0] - self.xd) ** 2 + 0.1*(state[1] - self.yd) ** 2 + obsTerm + regularization_term"""
-
 
     def is_obstacle_in_fov(self, rover_x, rover_y, obs_x, obs_y):
         
@@ -259,42 +266,73 @@ class ControllerKLCWoodbury:
             # Verifica la condizione di arresto
             if diff < epsilon:
                 break"""
-        
+
+
         return vect
     
     
-    #Chi sono P e P0 in questo caso?
-    def woodburyMethod(self, P0, Q, j):
-        L0 = Q-P0
-        D0 = np.linalg.inv(L0)
+    def woodburyMethod(self, P0, Q, Q0, indices, oldz):
+        z = np.zeros((P0.shape[0], ))
+
+        for i in indices:
+            L0 = Q0-P0
+            D0 = np.linalg.inv(L0)
+            
+            P = P0
+            P[i,:] = 0
+            P[i,i] = 1
+            L = Q-P
+            
+            rows, cols = L.shape
+
+            """for i in range(rows):
+                for j in range(cols):
+                    if L[i, j] != L0[i, j]:
+                        print(f"Differenza nella posizione ({i}, {j}): {L[i, j]} (matrix1) vs {L0[i, j]} (matrix2)")
+"""
+            ds = np.where(np.sum(np.abs(L - L0), axis=1) != 0)[0]
+
+            e = np.zeros((P.shape[0], 1))
+            e[ds] = 1 # 1296
+
+            d = L[ds,:] - L0[ds,:]
+            if d.shape[0] == 0:
+                return np.sum([z, oldz], axis=0)
+
+            terms = np.diag(P) == 1
+            p = P[:, terms]
+            p[terms, :] = 0
+            p[terms, :] = 0
+            
+            m0 = np.dot(D0, e)
+            z0 = np.dot(D0, p)
         
-        P = P0
-        P[j,j] = 1
-        L = Q-P
+            alpha = 1 / (1 + np.dot(d, m0))
+            
 
-        ds = np.where(np.sum(np.abs(L - L0), axis=1) != 0)[0]
-        print(ds)
-        e = np.zeros((P.shape[0], 1))
-        e[ds] = 1 # 1296
+            a1 = np.dot(d, z0)
+            #print("il vettore a1: " +str(a1))
+            a2 = np.dot(m0, a1)
+            
+            zc = z0 - np.dot(alpha.item(), a2)
 
-        d = L[ds,:] - L0[ds,:]
+            cost = np.exp(-Q[terms, terms])
+            newz = np.zeros((P0.shape[0], ))
 
-        terms = np.diag(P) == 1
+            if np.shape(zc)[1] == 1:
+                newz = zc*cost
+            else:
+                for k in range(np.shape(zc)[0]):
+                    for j in range(np.shape(cost)[0]):
+                        newz[k] += zc[k, j]*cost[j]      
 
-        p = P[:, terms]
-        p[terms, :] = 0
-        m0 = np.dot(D0, e)
+            newz[newz < 0] = 0
+            newz = newz.flatten()
+            newz = np.abs(newz)
 
-        z0 = np.dot(D0, p)
-    
-        alpha = 1 / (1 + np.dot(d, m0))
-
-        zc = z0 - alpha*m0 * np.dot(d, z0)
+            z = np.sum([z, newz], axis=0)
         
-        z = zc * Q[terms, terms]
-        
-        z = z.flatten()
-        z = np.abs(z)
+        #print(z)
 
         return z
 
@@ -325,7 +363,7 @@ class ControllerKLCWoodbury:
 
 print("Prova del sistema KLC")
 
-klc_controller = ControllerKLCWoodbury([16, 16], 1)
+klc_controller = ControllerKLCWoodbury([16, 16], 0)
 x, y, time = klc_controller.update()
 print(x[-1])
 print(y[-1])

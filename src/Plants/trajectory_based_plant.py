@@ -33,7 +33,7 @@ class trajectory_based_plant():
         non_zero_positions = list(zip(*indices))
 
         for index in non_zero_positions:
-            self.conditional[index] = cond[index] + abs(np.random.normal(0, 0.4))                        
+            self.conditional[index] = cond[index] + abs(np.random.normal(0, 1))                        
 
         return self.conditional
 

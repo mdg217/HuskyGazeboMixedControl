@@ -47,13 +47,13 @@ class ControllerKLC:
         self.zstep = [0.50, 0.50]
 
         #Amount of discrete bins
-        self.zdiscr = [36, 36]
+        self.zdiscr = [18, 18]
 
         #Number of iterations for the simulations
-        self.zsim = 15
+        self.zsim = 30
 
         #Duration of the simulation
-        self.duration = 75
+        self.duration = 20
 
         # Creazione del vettore 4D inizializzato con zeri
 
@@ -210,11 +210,11 @@ class ControllerKLC:
     :return: The calculated cost.
     """
     def cost(self, state):
-        k = 50
+        k = 30
         sx = 0.7
         sy = 0.7
-        q1 = 0.1
-        q2 = 0.1
+        q1 = 0.2
+        q2 = 0.2
         obsTerm = 0
 
         for obs in self.obstacles.get_obs():

@@ -27,8 +27,8 @@ class ControllerMPC:
     def tvp_fun(self, time):
 
         print(self.index)
-        if self.index >= 100:  #the result can't reach a number of waypoint after the simulation dimension
-             self.index = 99
+        if self.index >= 25:  #the result can't reach a number of waypoint after the simulation dimension
+             self.index = 24
 
         for k in range(21):
                 x, y = self.cache.next_target(self.index)
@@ -48,12 +48,14 @@ class ControllerMPC:
         self.cache = CostCache()
         self.index = 0
 
+        rospy.init_node('husky', anonymous=True)
+
         # Get the trasformation between odom and world
         self.init_position = get_position()
         self.cache.set_T(self.init_position)
 
         # Initialize ROS node
-        self.pub = rospy.Publisher('/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
+        self.pub = rospy.Publisher('/gazebo/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
 
         # Create a Twist message for robot motion
         self.move_cmd = Twist()
@@ -105,12 +107,13 @@ class ControllerMPC:
 
         # Perform MPC step to get the control input
         u = self.mpc.make_step(states)
+        print(states)
 
         #Change reference if the previous target got
         if u[0] <= 0.5 and u[1] <= 0.5:
             self.index+=1
 
-        if abs(states[0]-target[0])<=0.2 and abs(states[1]-target[1])<=0.2:
+        if abs(states[0]-target[0])<=0.4 and abs(states[1]-target[1])<=0.4:
             return states[0], states[1], 1
 
         # Set the linear and angular velocities for the robot's motion
@@ -140,19 +143,19 @@ class ControllerMPC:
         self.mpc.bounds['lower', '_x', 'x'] = 0
         self.mpc.bounds['lower', '_x', 'y'] = 0
 
-        self.mpc.bounds['upper', '_x', 'x'] = 18
-        self.mpc.bounds['upper', '_x', 'y'] = 18
+        self.mpc.bounds['upper', '_x', 'x'] = 9
+        self.mpc.bounds['upper', '_x', 'y'] = 9
 
         self.mpc.bounds['lower', '_x', 'theta'] = -np.pi
         self.mpc.bounds['upper', '_x', 'theta'] = np.pi
 
         # Set lower bounds on inputs
-        self.mpc.bounds['lower', '_u', 'v'] = -1
-        self.mpc.bounds['lower', '_u', 'w'] = -1
+        self.mpc.bounds['lower', '_u', 'v'] = -0.01
+        self.mpc.bounds['lower', '_u', 'w'] = -0.01
 
         # Set upper bounds on inputs
-        self.mpc.bounds['upper', '_u', 'v'] = 1
-        self.mpc.bounds['upper', '_u', 'w'] = 1
+        self.mpc.bounds['upper', '_u', 'v'] = 0.01
+        self.mpc.bounds['upper', '_u', 'w'] = 0.01
 
 
     """

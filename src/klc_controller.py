@@ -329,7 +329,7 @@ class ControllerKLC:
         self.z = np.exp(-self.V)
 
 
-
+"""
 print("Prova del sistema KLC")
 
 klc_controller = ControllerKLC([16, 16], 0)
@@ -355,4 +355,4 @@ for obs in klc_controller.obstacles.get_obs():
 plt.tight_layout()
 
 # Mostra i subplot
-plt.show()
+plt.show()"""

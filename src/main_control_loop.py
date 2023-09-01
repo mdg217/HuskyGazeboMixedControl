@@ -1,13 +1,15 @@
 import rospy
 from mpc_controller import *
 from cost_cache import *
-from klc_controller import *
+from klc_controller_online import *
 
 cache = CostCache()
 
 target = [8, 8]
-klc = ControllerKLC(target, 0)
-x, y, time = klc.update()
+klc = ControllerKLCOnline(target, 0)
+x, y, time, sx, sy = klc.update()
+#np.save("path_to_do_in_mpc", np.array([x,y]))
+#np.save("mean_stdv_plot_data", np.array([x, sx, y, sy]))
 klc.export_metrics(x, y, time)
 cache.set_next_target(x, y)
 
@@ -27,5 +29,25 @@ while not rospy.is_shutdown():
     if stopping_cond == 1:
         break
 
+print(x[-1])
+print(y[-1])
+
+# Crea una griglia di subplot con 1 riga e 2 colonne
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+
+# Plot del primo subplot
+axs.plot(mpc_x_history, mpc_y_history, marker='o', linestyle='-', color='r')
+axs.set_xlabel('X Position')
+axs.set_ylabel('Y Position')
+axs.set_title('Primo Plot')
+for obs in klc.obstacles.get_obs():
+    axs.scatter(obs[0], obs[1], color='r', s=1000)
+
+# Regola la spaziatura tra i subplot
+plt.tight_layout()
+
+# Mostra i subplot
+plt.show()
+
 print("salvataggio dei risultati nella simulazione!")
-np.save("klc_vision_linear_results_from_simulation", np.array([mpc_x_history, mpc_y_history, mpc_t_history]))
+np.save("klc_results_from_real_simulation", np.array([mpc_x_history, mpc_y_history, mpc_t_history]))

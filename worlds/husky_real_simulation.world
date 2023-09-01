@@ -130,10 +130,10 @@
       <pose>-0.464139 0 0 0 -0 0</pose>
     </model>
     <state world_name='default'>
-      <sim_time>3262 580000000</sim_time>
-      <real_time>156 592085424</real_time>
-      <wall_time>1693512404 737438077</wall_time>
-      <iterations>15632</iterations>
+      <sim_time>3290 710000000</sim_time>
+      <real_time>28 370445783</real_time>
+      <wall_time>1693576565 663554773</wall_time>
+      <iterations>2813</iterations>
       <model name='asphalt_plane'>
         <pose>0 0 0 0 -0 0</pose>
         <scale>0.500167 0.498718 1</scale>
@@ -215,10 +215,10 @@
         </link>
       </model>
       <model name='target'>
-        <pose>3.84024 3.75157 0.061711 -0.000137 -0.000386 0.000976</pose>
+        <pose>4 4 0.061711 -0.000136 -0.000386 0.000976</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>3.84024 3.75157 0.061711 -0.000137 -0.000386 0.000976</pose>
+          <pose>4 4 0.061711 -0.000136 -0.000386 0.000976</pose>
           <velocity>0 0 0 0 -0 0</velocity>
           <acceleration>0 0 0 0 -0 0</acceleration>
           <wrench>0 0 0 0 -0 0</wrench>
@@ -230,7 +230,7 @@
     </state>
     <gui fullscreen='0'>
       <camera name='user_camera'>
-        <pose>-3.33105 -3.80315 7.71658 0 0.844698 0.629264</pose>
+        <pose>3.40625 -11.6465 21.8718 0 1.1087 1.58126</pose>
         <view_controller>orbit</view_controller>
         <projection_type>perspective</projection_type>
       </camera>

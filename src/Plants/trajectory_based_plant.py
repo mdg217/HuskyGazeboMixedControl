@@ -5,7 +5,7 @@ class trajectory_based_plant():
 
     def get_plant(self, dim, uniform):
 
-        trackData = np.load('/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/simulation_final/klc_vision_linear_results_from_simulation.npy')
+        trackData = np.load('/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/simulation_final/mpc_simulation_klc_uniform.npy')
         self.conditional = uniform
 
         print(trackData[0][-1])
@@ -20,9 +20,9 @@ class trajectory_based_plant():
 
         # Set up parameters and dimensions
         self.Zdim = dim
-        self.Zmin = [0, 0] 
+        self.Zmin = [0, 0]
         self.Zstep = [0.5, 0.5]
-        self.Zdiscr = [37, 37]
+        self.Zdiscr = [19, 19]
 
         (full, Y) = self.getJointPMFs()
         cond = self.getConditional(full, Y)

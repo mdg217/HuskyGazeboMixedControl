@@ -50,12 +50,12 @@ class ControllerKLCOnline:
         self.zstep = [0.5, 0.5]
 
         #Amount of discrete bins
-        self.zdiscr = [36, 36]
+        self.zdiscr = [18, 18]
 
         #Number of iterations for the simulations
         self.zsim = 15
         #Duration of the simulation
-        self.duration = 45
+        self.duration = 25
 
         # Creazione del vettore 4D inizializzato con zeri
 
@@ -142,7 +142,6 @@ class ControllerKLCOnline:
                 hist[i]=state #Log the state
                 state = self.loop(state) #Sample the new state
 
-
             fullH[j] = [x[0] for x in hist]
             fullHv[j] = [x[1] for x in hist]
 
@@ -151,22 +150,6 @@ class ControllerKLCOnline:
         for i in range(self.duration):
             meanx[i] = np.mean(fullH[:,i])
             stdsx[i] = np.std(fullH[:,i])
-
-        plt.rcParams.update({'font.size': 18})
-
-        #PLOT X -> Angle
-        x = np.array([x for x in range(self.duration)])
-        y = np.array(meanx)
-        ci = np.array(stdsx)
-
-        fig, ax = plt.subplots()
-        plt.xlim([0, self.duration])
-        ax.plot(x,y)
-        plt.xlabel("Time")
-        plt.ylabel("State")
-        plt.title("Position on x")
-        ax.fill_between(x, (y-ci), (y+ci), color='b', alpha=.1)
-        plt.show()
 
         meany = [0]*self.duration #Get the means and stds for plotting
         stdsy = [0]*self.duration
@@ -182,23 +165,7 @@ class ControllerKLCOnline:
             meanx[i] = np.mean(fullH[:,i])
             stdsx[i] = np.std(fullH[:,i])
 
-        plt.rcParams.update({'font.size': 18})
-
-        #PLOT X -> Angle
-        x = np.array([x for x in range(self.duration)])
-        y = np.array(meany)
-        ci = np.array(stdsy)
-
-        fig, ax = plt.subplots()
-        plt.xlim([0, self.duration])
-        ax.plot(x,y)
-        plt.xlabel("Time")
-        plt.ylabel("State")
-        plt.title("Position on y")
-        ax.fill_between(x, (y-ci), (y+ci), color='b', alpha=.1)
-        plt.show()
-
-        return [meanx, meany, time]
+        return [meanx, meany, time, stdsx, stdsy]
 
     
     # Utility methods for init and update methods
@@ -229,7 +196,7 @@ class ControllerKLCOnline:
     :return: The calculated cost.
     """
     def cost(self, state):
-        k = 30
+        k = 25
         sx = 0.7
         sy = 0.7
 
@@ -248,7 +215,7 @@ class ControllerKLCOnline:
         regularization_term = 0.1 * distance_to_goal  # Adjust the scaling factor as needed
 
         # Include the regularization term in the overall cost calculation 
-        return 0.1*(state[0] - self.xd) ** 2 + 0.1*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
+        return 0.6*(state[0] - self.xd) ** 2 + 0.6*(state[1] - self.yd) ** 2 + obsTerm #+ regularization_term
 
 
     def is_obstacle_in_fov(self, rover_x, rover_y, obs_x, obs_y):
@@ -329,28 +296,3 @@ class ControllerKLCOnline:
 
     def export_metrics(self, x, y, time):
         np.save("klc_vision_linear_results_from_planning", np.array([x, y, time]))
-
-
-print("Prova del sistema KLC")
-
-klc_controller = ControllerKLCOnline([16, 16], 0)
-x, y, time = klc_controller.update()
-print(x[-1])
-print(y[-1])
-
-# Crea una griglia di subplot con 1 riga e 2 colonne
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-
-# Plot del primo subplot
-axs.plot(x, y, marker='o', linestyle='-', color='r')
-axs.set_xlabel('X Position')
-axs.set_ylabel('Y Position')
-axs.set_title('Primo Plot')
-for obs in klc_controller.obstacles.get_obs():
-    axs.scatter(obs[0], obs[1], color='r', s=1000)
-
-# Regola la spaziatura tra i subplot
-plt.tight_layout()
-
-# Mostra i subplot
-plt.show()

@@ -1,14 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.stats import norm
-from math import log
-from obstacle import *
 import rospy
 from Plants.uniform_plant import *
 from Plants.linearized_plant import *
 from Plants.trajectory_based_plant import *
 from time import *
 from pylab import rcParams
+from cost_cache import *
+from utility import *
 
 """
 ControllerKLC: A class implementing a Kinematic Linearization Controller (KLC) for robot motion planning.
@@ -29,12 +28,6 @@ class ControllerKLCOnline:
 
         rospy.init_node('husky', anonymous=True)
 
-        # Get the trasformation between odom and world
-        self.init_position = get_position()
-        self.cache.set_T(self.init_position)
-
-        self.obstacles = Obstacle()
-
         #Target definition
         self.goal = goal
         self.xd = goal[0]
@@ -50,12 +43,12 @@ class ControllerKLCOnline:
         self.zstep = [0.5, 0.5]
 
         #Amount of discrete bins
-        self.zdiscr = [36, 36]
+        self.zdiscr = [18, 18]
 
         #Number of iterations for the simulations
         self.zsim = 15
         #Duration of the simulation
-        self.duration = 45
+        self.duration = 30
 
         # Creazione del vettore 4D inizializzato con zeri
 
@@ -91,6 +84,8 @@ class ControllerKLCOnline:
                 self.Prob[ind1] = self.unravelPF(pf)
 
         self.z = np.array((np.shape(self.Prob))[0])
+
+        self.world_odom_obstacles = [[0, 3], [3.5, 3.5], [1.2, 3.3], [2, 4.1], [4.3, 4.3], [7.5, 2.5]]
     
     """
     Update the controller's behavior based on the current state.
@@ -229,6 +224,7 @@ class ControllerKLCOnline:
     :return: The calculated cost.
     """
     def cost(self, state):
+
         k = 30
         sx = 0.7
         sy = 0.7
@@ -236,7 +232,7 @@ class ControllerKLCOnline:
         obsTerm = 0
 
         #ADD VISION OF THE ROBOT FOR THE OBSTACLES
-        for obs in self.obstacles.get_obs():
+        for obs in self.world_odom_obstacles:
             
             if(self.is_obstacle_in_fov(state[0], state[1], obs[0], obs[1]) == True):
                 xterm = ((state[0] - obs[0]) / sx) ** 2
@@ -248,7 +244,7 @@ class ControllerKLCOnline:
         regularization_term = 0.1 * distance_to_goal  # Adjust the scaling factor as needed
 
         # Include the regularization term in the overall cost calculation 
-        return 0.1*(state[0] - self.xd) ** 2 + 0.1*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
+        return 0.6*(state[0] - self.xd) ** 2 + 0.6*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
 
 
     def is_obstacle_in_fov(self, rover_x, rover_y, obs_x, obs_y):
@@ -331,7 +327,7 @@ class ControllerKLCOnline:
         np.save("klc_vision_linear_results_from_planning", np.array([x, y, time]))
 
 
-print("Prova del sistema KLC")
+"""print("Prova del sistema KLC")
 
 klc_controller = ControllerKLCOnline([16, 16], 0)
 x, y, time = klc_controller.update()
@@ -353,4 +349,4 @@ for obs in klc_controller.obstacles.get_obs():
 plt.tight_layout()
 
 # Mostra i subplot
-plt.show()
+plt.show()"""

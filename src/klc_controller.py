@@ -2,11 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import norm
 from math import log
-from obstacle import *
 import rospy
 from Plants.uniform_plant import *
 from Plants.linearized_plant import *
 from Plants.trajectory_based_plant import *
+from cost_cache import *
 
 """
 ControllerKLC: A class implementing a Kinematic Linearization Controller (KLC) for robot motion planning.
@@ -26,12 +26,6 @@ class ControllerKLC:
         self.cache = CostCache()
 
         rospy.init_node('husky', anonymous=True)
-
-        # Get the trasformation between odom and world
-        self.init_position = get_position()
-        self.cache.set_T(self.init_position)
-
-        self.obstacles = Obstacle()
 
         #Target definition
         self.xd = goal[0]

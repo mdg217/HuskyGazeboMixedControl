@@ -1,12 +1,12 @@
 import rospy
 from mpc_controller import *
 from cost_cache import *
-from klc_controller import *
+from klc_controller_online import *
 
 cache = CostCache()
 
 target = [8, 8]
-klc = ControllerKLC(target, 0)
+klc = ControllerKLCOnline(target, 0)
 x, y, time = klc.update()
 klc.export_metrics(x, y, time)
 cache.set_next_target(x, y)
@@ -24,6 +24,7 @@ while not rospy.is_shutdown():
     mpc_y_history = np.append(mpc_y_history, mpc_y)
     mpc_t += 0.1
     mpc_t_history = np.append(mpc_t_history, mpc_t)
+    print("prova")
     if stopping_cond == 1:
         break
 

@@ -9,7 +9,6 @@ from casadi import *
 import numpy as np
 from cost_cache import *
 from model import *
-from obstacle import *
 
 """
 ControllerMPC: A class implementing a Model Predictive Control (MPC) controller for a robot's motion.
@@ -27,8 +26,8 @@ class ControllerMPC:
     def tvp_fun(self, time):
 
         print(self.index)
-        if self.index >= 100:  #the result can't reach a number of waypoint after the simulation dimension
-             self.index = 99
+        if self.index >= 45:  #the result can't reach a number of waypoint after the simulation dimension
+             self.index = 44
 
         for k in range(21):
                 x, y = self.cache.next_target(self.index)
@@ -48,12 +47,12 @@ class ControllerMPC:
         self.cache = CostCache()
         self.index = 0
 
-        # Get the trasformation between odom and world
-        self.init_position = get_position()
-        self.cache.set_T(self.init_position)
+        print("prova")
 
         # Initialize ROS node
         self.pub = rospy.Publisher('/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
+
+        print("prova")
 
         # Create a Twist message for robot motion
         self.move_cmd = Twist()
@@ -62,6 +61,8 @@ class ControllerMPC:
         self.rate = rospy.Rate(10)
 
         self.model = Model().get_model()
+
+        print("prova")
 
         #mpc controller INIT
         setup_mpc = {
@@ -97,8 +98,9 @@ class ControllerMPC:
     def update(self, target):
 
         # Get the robot's current states (position and orientation)
-        actual_position = get_actual_position(self.init_position)
+        actual_position = get_position()
         states = numpy.array([actual_position[0], actual_position[1], actual_position[5]]).reshape(-1, 1)
+        print(states)
 
         #Implement disturbance on the model
         states_noise = np.array(add_noise_to_states(states)).reshape(-1,1)

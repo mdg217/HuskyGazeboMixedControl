@@ -18,13 +18,17 @@ def get_link_states(link_name, reference_frame):
         print("Service call failed: %s"%e)
 
 def get_position():
-    T_odom_world = get_link_states('husky::base_link', 'world') #its the same as T_baselink_world
-    TOW = t.concatenate_matrices(t.translation_matrix([T_odom_world.link_state.pose.position.x, T_odom_world.link_state.pose.position.y, T_odom_world.link_state.pose.position.z]),
-            t.quaternion_matrix([T_odom_world.link_state.pose.orientation.x, T_odom_world.link_state.pose.orientation.y, T_odom_world.link_state.pose.orientation.z, T_odom_world.link_state.pose.orientation.w]))
+    T_odom_world = get_link_states('base_link', 'odom') #its the same as T_baselink_world
+    #rospy.Subscriber('/vrpn_client_ros/RigidBody/pose', Pose, some_callback)
     
-    return TOW
+    print(T_odom_world)
+    trans = tf.transformations.translation_from_matrix(T_odom_world)
+    rot = tf.transformations.quaternion_from_matrix(T_odom_world)
+    (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(rot)
 
-def get_actual_position(init_position):
+    return [trans[0], trans[1], trans[2], roll, pitch, yaw]
+
+"""def get_actual_position(init_position):
 
     actual_position = get_position()
 
@@ -33,9 +37,10 @@ def get_actual_position(init_position):
     rot = tf.transformations.quaternion_from_matrix(result)
     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(rot)
 
-    return [trans[0], trans[1], trans[2], roll, pitch, yaw]
+    return [trans[0], trans[1], trans[2], roll, pitch, yaw]"""
 
-def get_obstacle_position_odom(init_position, obs_position_world):
+
+"""def get_obstacle_position_odom(init_position, obs_position_world):
 
     obs_pos = t.concatenate_matrices(t.translation_matrix([obs_position_world[0], obs_position_world[1], obs_position_world[2]]),
             t.quaternion_matrix(([obs_position_world[3], obs_position_world[4], obs_position_world[5], obs_position_world[6]])))
@@ -45,7 +50,7 @@ def get_obstacle_position_odom(init_position, obs_position_world):
     rot = tf.transformations.quaternion_from_matrix(result)
     (roll, pitch, yaw) = tf.transformations.euler_from_quaternion(rot)
 
-    return [trans[0], trans[1], trans[2], roll, pitch, yaw]
+    return [trans[0], trans[1], trans[2], roll, pitch, yaw]"""
 
 
 def publish_tf(translation, rot):

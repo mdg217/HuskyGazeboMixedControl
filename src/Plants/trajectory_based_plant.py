@@ -5,7 +5,7 @@ class trajectory_based_plant():
 
     def get_plant(self, dim, uniform):
 
-        trackData = np.load('/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/simulation_final/mpc_simulation_klc_uniform.npy')
+        trackData = np.load('path_to_the_recorded_data')
         self.conditional = uniform
 
         print(trackData[0][-1])

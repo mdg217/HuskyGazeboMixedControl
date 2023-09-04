@@ -31,9 +31,9 @@ class ControllerMPC:
              self.index = 24
 
         for k in range(21):
-                x, y = self.cache.next_target(self.index)
-                self.tvp_template['_tvp', k, 'xd'] = x
-                self.tvp_template['_tvp', k, 'yd'] = y
+            x, y = self.cache.next_target(self.index)
+            self.tvp_template['_tvp', k, 'xd'] = x
+            self.tvp_template['_tvp', k, 'yd'] = y
 
         return self.tvp_template
 
@@ -55,7 +55,7 @@ class ControllerMPC:
         self.cache.set_T(self.init_position)
 
         # Initialize ROS node
-        self.pub = rospy.Publisher('/gazebo/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
+        self.pub = rospy.Publisher('/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
 
         # Create a Twist message for robot motion
         self.move_cmd = Twist()
@@ -90,6 +90,9 @@ class ControllerMPC:
         self.mpc.x0 = x0
         self.mpc.set_initial_guess()
 
+        self.u1 = []
+        self.u2 = []
+
 
     """
     Update the controller and apply the calculated control input to the robot.
@@ -107,7 +110,10 @@ class ControllerMPC:
 
         # Perform MPC step to get the control input
         u = self.mpc.make_step(states)
-        print(states)
+        print("INGRESSO TROVATO: ", u)
+
+        self.u1.append(u[0])
+        self.u2.append(u[1])
 
         #Change reference if the previous target got
         if u[0] <= 0.5 and u[1] <= 0.5:
@@ -143,19 +149,19 @@ class ControllerMPC:
         self.mpc.bounds['lower', '_x', 'x'] = 0
         self.mpc.bounds['lower', '_x', 'y'] = 0
 
-        self.mpc.bounds['upper', '_x', 'x'] = 9
-        self.mpc.bounds['upper', '_x', 'y'] = 9
+        self.mpc.bounds['upper', '_x', 'x'] = 10
+        self.mpc.bounds['upper', '_x', 'y'] = 10
 
         self.mpc.bounds['lower', '_x', 'theta'] = -np.pi
         self.mpc.bounds['upper', '_x', 'theta'] = np.pi
 
         # Set lower bounds on inputs
-        self.mpc.bounds['lower', '_u', 'v'] = -0.01
-        self.mpc.bounds['lower', '_u', 'w'] = -0.01
+        self.mpc.bounds['lower', '_u', 'v'] = -1
+        self.mpc.bounds['lower', '_u', 'w'] = -1
 
         # Set upper bounds on inputs
-        self.mpc.bounds['upper', '_u', 'v'] = 0.01
-        self.mpc.bounds['upper', '_u', 'w'] = 0.01
+        self.mpc.bounds['upper', '_u', 'v'] = 1
+        self.mpc.bounds['upper', '_u', 'w'] = 1
 
 
     """
@@ -169,3 +175,7 @@ class ControllerMPC:
         lterm = mterm + 1/2*self.model.u['v']**2 + 1/2*self.model.u['w']**2 
 
         self.mpc.set_objective(mterm=mterm, lterm=lterm)
+
+    
+    def get_inputs(self):
+        return self.u1, self.u2

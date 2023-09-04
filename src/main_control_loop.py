@@ -51,3 +51,7 @@ plt.show()
 
 print("salvataggio dei risultati nella simulazione!")
 np.save("klc_results_from_real_simulation", np.array([mpc_x_history, mpc_y_history, mpc_t_history]))
+
+u1, u2 = mpc.get_inputs()
+
+np.save("inputs_for_husky", np.array([u1, u2]))

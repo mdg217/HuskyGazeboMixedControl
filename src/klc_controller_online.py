@@ -26,8 +26,6 @@ class ControllerKLCOnline:
 
         self.cache = CostCache()
 
-        rospy.init_node('husky', anonymous=True)
-
         #Target definition
         self.goal = goal
         self.xd = goal[0]

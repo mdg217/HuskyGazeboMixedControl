@@ -48,18 +48,6 @@ class ControllerMPC:
         self.index = 0
 
         print("prova")
-
-        # Initialize ROS node
-        self.pub = rospy.Publisher('/husky_velocity_controller/cmd_vel', Twist, queue_size=1)
-
-        print("prova")
-
-        # Create a Twist message for robot motion
-        self.move_cmd = Twist()
-
-        # Set the rate for the ROS loop
-        self.rate = rospy.Rate(10)
-
         self.model = Model().get_model()
 
         print("prova")
@@ -95,15 +83,15 @@ class ControllerMPC:
     
     :param self: The instance of the class.
     """
-    def update(self, target):
+    def update(self, target, states):
 
         # Get the robot's current states (position and orientation)
-        actual_position = get_position()
-        states = numpy.array([actual_position[0], actual_position[1], actual_position[5]]).reshape(-1, 1)
+        
         print(states)
+        states = np.array(states).reshape(-1,1)
 
         #Implement disturbance on the model
-        states_noise = np.array(add_noise_to_states(states)).reshape(-1,1)
+        #states_noise = np.array(add_noise_to_states(states)).reshape(-1,1)
 
         # Perform MPC step to get the control input
         u = self.mpc.make_step(states)
@@ -115,18 +103,9 @@ class ControllerMPC:
         if abs(states[0]-target[0])<=0.2 and abs(states[1]-target[1])<=0.2:
             return states[0], states[1], 1
 
-        # Set the linear and angular velocities for the robot's motion
-        self.move_cmd.linear.x = u[0] 
-        self.move_cmd.angular.z = u[1]
-
-        # Publish the motion command
-        self.pub.publish(self.move_cmd)
-
-        # Sleep according to the defined rate
-        self.rate.sleep()
         #self.cache.set_actual_state(states[0], states[1])
         
-        return states[0], states[1], 0
+        return u, states[0], states[1], 0
 
 
     """ METHOD FOR THE __init__ and update Method (utility)"""
@@ -149,12 +128,12 @@ class ControllerMPC:
         self.mpc.bounds['upper', '_x', 'theta'] = np.pi
 
         # Set lower bounds on inputs
-        self.mpc.bounds['lower', '_u', 'v'] = -1
-        self.mpc.bounds['lower', '_u', 'w'] = -1
+        self.mpc.bounds['lower', '_u', 'v'] = -0.01
+        self.mpc.bounds['lower', '_u', 'w'] = -0.01
 
         # Set upper bounds on inputs
-        self.mpc.bounds['upper', '_u', 'v'] = 1
-        self.mpc.bounds['upper', '_u', 'w'] = 1
+        self.mpc.bounds['upper', '_u', 'v'] = 0.01
+        self.mpc.bounds['upper', '_u', 'w'] = 0.01
 
 
     """

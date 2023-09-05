@@ -128,12 +128,12 @@ class ControllerMPC:
         self.mpc.bounds['upper', '_x', 'theta'] = np.pi
 
         # Set lower bounds on inputs
-        self.mpc.bounds['lower', '_u', 'v'] = -0.01
-        self.mpc.bounds['lower', '_u', 'w'] = -0.01
+        self.mpc.bounds['lower', '_u', 'v'] = -0.6
+        self.mpc.bounds['lower', '_u', 'w'] = -0.3
 
         # Set upper bounds on inputs
-        self.mpc.bounds['upper', '_u', 'v'] = 0.01
-        self.mpc.bounds['upper', '_u', 'w'] = 0.01
+        self.mpc.bounds['upper', '_u', 'v'] = 0.6
+        self.mpc.bounds['upper', '_u', 'w'] = 0.3
 
 
     """

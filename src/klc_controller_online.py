@@ -83,7 +83,7 @@ class ControllerKLCOnline:
 
         self.z = np.array((np.shape(self.Prob))[0])
 
-        self.world_odom_obstacles = [[0, 3], [3.5, 3.5], [1.2, 3.3], [2, 4.1], [4.3, 4.3], [7.5, 2.5]]
+        self.world_odom_obstacles = [[0.5, 3.5], [4, 4], [1.7, 3.8], [2.5, 4.6], [4.8, 4.8], [8, 3]]
     
     """
     Update the controller's behavior based on the current state.

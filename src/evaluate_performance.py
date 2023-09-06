@@ -35,7 +35,6 @@ print("Time to get the target is: " + str(simulation[2][-1]))
 
 # Determina il numero di punti desiderato per l'interpolazione
 target_length = len(simulation[0])
-print(target_length)
 
 # Interpolazione dei dati di "planning"
 interpolated_waypoints = interpolate_waypoints(np.array([planning[0], planning[1]]), target_length)

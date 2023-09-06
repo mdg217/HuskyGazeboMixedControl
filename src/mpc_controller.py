@@ -131,7 +131,6 @@ class ControllerMPC:
 
         # Sleep according to the defined rate
         self.rate.sleep()
-        #self.cache.set_actual_state(states[0], states[1])
         
         return states[0], states[1], 0
 

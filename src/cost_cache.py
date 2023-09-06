@@ -26,9 +26,6 @@ class CostCache:
         self.T = None
         self.target_x = []
         self.target_y = []
-        self.x = 0
-        self.y = 0
-        self.next_state = []
     
     """
     Retrieves the cached value T.
@@ -64,18 +61,3 @@ class CostCache:
     """
     def next_target(self, index):
         return [self.target_x[index], self.target_y[index]]
-
-
-    def set_actual_state(self, x, y):
-        self.x = x
-        self.y = y
-
-    def get_actual_state(self):
-        return [self.x, self.y]
-    
-
-    def set_next_state(self, state):
-        self.next_state = state
-
-    def get_next_state(self):
-        return self.next_state

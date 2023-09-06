@@ -293,6 +293,38 @@ class ControllerKLCOnline:
         newState = self.stateVect[ind] #Get the new state from the state vector
         return(newState)
     
+    def value_iteration(self, max_iterations=100, convergence_threshold=1e-6):
+        actions = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1)]
+
+        for _ in range(max_iterations):
+            new_V = np.copy(self.V)
+            max_change = 0  # Keep track of the maximum change in V for convergence check
+
+            for x in range(self.zdiscr[0]):
+                for y in range(self.zdiscr[1]):
+                    current_state_index = x * self.zdiscr[1] + y
+                    min_value = np.inf
+
+                    for action in actions:
+                        next_x, next_y = x + action[0], y + action[1]
+
+                        if 0 <= next_x < self.zdiscr[0] and 0 <= next_y < self.zdiscr[1]:
+                            next_state_index = next_x * self.zdiscr[1] + next_y
+                            transition_prob = self.passive_dynamics[x, y, next_x, next_y]
+                            action_value = transition_prob * self.cost(self.stateVect[next_state_index]) + self.V[next_state_index]
+
+                            min_value = min(min_value, action_value)
+                    
+                    new_V[current_state_index] = min_value
+                    max_change = max(max_change, abs(self.V[current_state_index] - new_V[current_state_index]))
+
+            self.V = new_V
+            
+            if max_change < convergence_threshold:
+                break
+
+        self.z = np.exp(-self.V)
+    
 
     def export_metrics(self, x, y, time):
         np.save("klc_vision_linear_results_from_planning", np.array([x, y, time]))

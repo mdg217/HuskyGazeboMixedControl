@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
+from matplotlib.animation import FuncAnimation
 
 def extract_data_from_dataset(file_name):
     return np.load(file_name)
@@ -28,12 +29,13 @@ def interpolate_waypoints(waypoints, new_length):
 
     return interpolated_waypoints
 
-planning = extract_data_from_dataset("/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/simulation_final/dynamic_vision_linear_results_from_planning.npy")
-simulation = extract_data_from_dataset("/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/simulation_final/dynamic_vision_linear_results_from_simulation.npy")
+planning = extract_data_from_dataset("/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/klc_vision_linear_results_from_planning.npy")
+simulation = extract_data_from_dataset("/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/klc_results_from_real_simulation.npy")
 print("Time to get the target is: " + str(simulation[2][-1]))
 
 # Determina il numero di punti desiderato per l'interpolazione
 target_length = len(simulation[0])
+print(target_length)
 
 # Interpolazione dei dati di "planning"
 interpolated_waypoints = interpolate_waypoints(np.array([planning[0], planning[1]]), target_length)
@@ -46,19 +48,48 @@ for x1, x2 in zip(simulation[1], interpolated_waypoints[1]):
 print(calculate_mean_position_error(np.array([simulation[0], simulation[1]]), interpolated_waypoints))
 
 # Creazione del grafico
-plt.plot(interpolated_waypoints[0], interpolated_waypoints[1], marker='o', label='Planning', zorder=0)
-plt.plot(simulation[0], simulation[1], marker='o', label='Simulation', zorder=1)
+fig, ax = plt.subplots(figsize=(10, 10))
 
-# Aggiunta del punto in primo piano
-plt.scatter(16, 16, color='green', marker='o', label='Final Target', s=100, zorder=2)
+# Set the initial size of the axis to 10x10 units
+ax.set_xlim(0, 10)  # Set the x-axis limits from 0 to 10
+ax.set_ylim(0, 10)  # Set the y-axis limits from 0 to 10
+# Initialize empty line objects for the paths
+planning_line, = ax.plot([],[] , marker='o', label='Planning', zorder=0)
+simulation_line, = ax.plot([], [], marker='o', label='Simulation', zorder=1)
 
-# Aggiunta di titoli e label agli assi
-plt.title('Performance on the target')
-plt.xlabel('x position')
-plt.ylabel('y position')
+# Initialize a point for the final target
+target_point = ax.scatter(7.9, 7.9, color='green', marker='o', label='Final Target', s=200, zorder=2)
 
-# Aggiunta di una legenda
-plt.legend()
+# Add titles and labels to the plot
+ax.set_title('Performance on the target')
+ax.set_xlabel('x position')
+ax.set_ylabel('y position')
 
-# Mostra il grafico
+# Add a legend
+ax.legend()
+
+# Function to initialize the plot
+def init():
+    planning_line.set_data([], [])
+    simulation_line.set_data([], [])
+    return planning_line, simulation_line
+
+# Function to update the plot for each frame of the animation
+def update(frame):
+    x_planning = interpolated_waypoints[0, :frame+1]
+    y_planning = interpolated_waypoints[1, :frame+1]
+    x_simulation = simulation[0, :frame+1]
+    y_simulation = simulation[1, :frame+1]
+
+    planning_line.set_data(x_planning, y_planning)
+    simulation_line.set_data(x_simulation, y_simulation)
+    
+    return planning_line, simulation_line
+
+# Create an animation object
+num_frames = target_length  # Number of frames (one for each point)
+animation = FuncAnimation(fig, update, frames=num_frames, init_func=init, blit=True)
+
+# Display the animation
 plt.show()
+

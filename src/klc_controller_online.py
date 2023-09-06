@@ -135,7 +135,7 @@ class ControllerKLCOnline:
                     #Build the diagonal matrix with the exponential of the opposite of the cost
                     diagMinusQ[k,k] = np.exp(-self.cost(self.stateVect[k]))
 
-                self.z = self.powerMethod(diagMinusQ@self.Prob, self.zdiscr[0]**2)
+                self.z = self.power_method(diagMinusQ@self.Prob, self.zdiscr[0]**2)
                 
                 possible_states = []
 
@@ -254,7 +254,7 @@ class ControllerKLCOnline:
     :param dim: The dimensionality of the matrix.
     :return: The estimated eigenvector.
     """
-    def powerMethod(self, mat, dim, epsilon=1e-6):
+    def power_method(self, mat, dim, epsilon=1e-6):
         vect = np.ones(dim)
         nrm = np.linalg.norm(vect)
         
@@ -293,7 +293,7 @@ class ControllerKLCOnline:
         newState = self.stateVect[ind] #Get the new state from the state vector
         return(newState)
     
-    def value_iteration(self, max_iterations=100, convergence_threshold=1e-6):
+    def dynamic_programming(self, max_iterations=100, convergence_threshold=1e-6):
         actions = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1)]
 
         for _ in range(max_iterations):

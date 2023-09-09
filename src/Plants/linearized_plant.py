@@ -19,14 +19,13 @@ class linearized_plant:
     def get_plant(self, dim):
 
         # Load system data from a file
-        self.sysData = np.load('/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/2TypeSimulation.npy')
-        print(np.shape(self.sysData))
+        self.sysData = np.load('/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/3TypeSimulation.npy')
 
         # Set up parameters and dimensions
         self.Zdim = dim
         self.Zmin = [0, 0] 
         self.Zstep = [0.5, 0.5]
-        self.Zdiscr = [37, 37]
+        self.Zdiscr = [21, 21]
 
         # Compute the joint and conditional probability matrices
         (full, Y) = self.getJointPMFs()
@@ -69,7 +68,7 @@ class linearized_plant:
                 Yind = self.discretize(Y)
 
                 fullInd = Yind + Zind  # Get the index of the joint variable Z,Y
-
+                
                 fullJoint[fullInd] = fullJoint[fullInd] + 1  # Update the values
                 Yjoint[Yind] = Yjoint[Yind] + 1
         fullJoint = fullJoint / np.sum(fullJoint)  # Normalize

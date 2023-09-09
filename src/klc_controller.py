@@ -4,6 +4,7 @@ from scipy.stats import norm
 from math import log
 from obstacle import *
 import rospy
+import time
 from Plants.uniform_plant import *
 from Plants.linearized_plant import *
 from Plants.trajectory_based_plant import *
@@ -25,6 +26,7 @@ class ControllerKLC:
 
         self.cache = CostCache()
 
+        self.mode = mode
         rospy.init_node('husky', anonymous=True)
 
         # Get the trasformation between odom and world
@@ -44,16 +46,16 @@ class ControllerKLC:
         self.zmin = [0, 0] 
 
         #Discretization steps
-        self.zstep = [0.50, 0.50]
+        self.zstep = [0.25, 0.25]
 
         #Amount of discrete bins
-        self.zdiscr = [18, 18]
+        self.zdiscr = [40, 40]
 
         #Number of iterations for the simulations
-        self.zsim = 30
+        self.zsim = 15
 
         #Duration of the simulation
-        self.duration = 20
+        self.duration = 30
 
         # Creazione del vettore 4D inizializzato con zeri
 
@@ -61,7 +63,6 @@ class ControllerKLC:
 
         if mode == 0:
             self.passive_dynamics = uniform_plant().get_plant(self.zdiscr[0])
-            print(type(self.passive_dynamics)) 
         elif mode == 1:
             self.passive_dynamics = linearized_plant().get_plant(2)
         elif mode == 2:
@@ -84,9 +85,33 @@ class ControllerKLC:
 
         self.diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
 
+        
+
         for i in range(self.zdiscr[0]**2):
             #Build the diagonal matrix with the exponential of the opposite of the cost
             self.diagMinusQ[i,i] = np.exp(-self.cost(self.stateVect[i]))
+
+        heatmap = np.zeros((self.zdiscr[0], self.zdiscr[1]))
+        
+        for i in range(self.zdiscr[0]):
+            for j in range(self.zdiscr[1]):
+                #Build the diagonal matrix with the exponential of the opposite of the cost
+                state = self.stateVect[i*self.zdiscr[0] + j]
+                print(self.cost(state))
+                heatmap[j, i] = self.cost(state)
+        
+
+        # Crea il plot della heatmap
+        plt.figure(figsize=(10, 8))
+        plt.imshow(heatmap, cmap='viridis', interpolation='nearest', origin='lower')
+        plt.colorbar(label='State cost')
+        
+        # Imposta la dimensione dei caratteri per il titolo, l'etichetta x e l'etichetta y
+        plt.title('State cost heatmap', fontsize=20)
+        plt.xlabel('x', fontsize=20)
+        plt.ylabel('y', fontsize=20)
+        plt.show()
+
 
         self.Prob = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2))
 
@@ -97,13 +122,111 @@ class ControllerKLC:
                 self.Prob[ind1] = self.unravelPF(pf)
 
         self.z = np.array((self.zdiscr[0]**2))
-        self.z = self.powerMethod(self.diagMinusQ@self.Prob, self.zdiscr[0]**2) 
-        """self.V = np.ones((self.zdiscr[0] ** 2,))
-        self.value_iteration()
 
-        print(self.V)"""
+        #Compute the execution time
+        start_time = time.time()
+        zmp = self.powerMethod(self.diagMinusQ@self.Prob, self.zdiscr[0]**2) 
+        #print(zmp)
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        zmpheat = np.zeros((self.zdiscr[0], self.zdiscr[1]))
         
+        for i in range(self.zdiscr[0]):
+            for j in range(self.zdiscr[1]):
+                #Build the diagonal matrix with the exponential of the opposite of the cost
+                zmpheat[j, i] = zmp[i*self.zdiscr[0] + j]
+        
+
+        # Crea il plot della heatmap
+        plt.figure(figsize=(10, 8))
+        plt.imshow(zmpheat, cmap='viridis', interpolation='nearest', origin='lower')
+        plt.colorbar(label='State cost')
+        
+        # Imposta la dimensione dei caratteri per il titolo, l'etichetta x e l'etichetta y
+        plt.title('State cost heatmap', fontsize=20)
+        plt.xlabel('x', fontsize=20)
+        plt.ylabel('y', fontsize=20)
+        plt.show()
+
+
+
+        print(f"Tempo di esecuzione: {elapsed_time} secondi")
+        
+        #Compute the execution time
+        start_time = time.time()
+        self.dynamic_programming() 
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+
+        print(f"Tempo di esecuzione: {elapsed_time} secondi")
+
+        zdpheat = np.zeros((self.zdiscr[0], self.zdiscr[1]))
+        
+        for i in range(self.zdiscr[0]):
+            for j in range(self.zdiscr[1]):
+                #Build the diagonal matrix with the exponential of the opposite of the cost
+                zdpheat[j, i] = self.z[i*self.zdiscr[0] + j]
+        
+
+        # Crea il plot della heatmap
+        plt.figure(figsize=(10, 8))
+        plt.imshow(zdpheat, cmap='viridis', interpolation='nearest', origin='lower')
+        plt.colorbar(label='State cost')
+        
+        # Imposta la dimensione dei caratteri per il titolo, l'etichetta x e l'etichetta y
+        plt.title('State cost heatmap', fontsize=20)
+        plt.xlabel('x', fontsize=20)
+        plt.ylabel('y', fontsize=20)
+        plt.show()
+
     
+
+    """
+    set initial guess u=p (probably passive dynamics)
+    set initial guess v
+    repeat while not converged:
+    for each state s:
+        p(s'|s) (transition probabilities from s)
+        u(s'|s) (transition probs from s)
+        calculate the inside of brackets in (1) = l(s,u) + E_u(s'|s)[v(s')]
+        find unext(s'|s) = min_u (what is above)
+    """
+    def dynamic_programming(self, max_iterations=100):
+        u = self.passive_dynamics
+        p = self.passive_dynamics
+        v = np.zeros((self.zdiscr[0], self.zdiscr[1]))
+
+        for _ in range(max_iterations):
+            #new_V = np.copy(self.V)
+
+            for x in range(self.zdiscr[0]):
+                last_v = v
+                for y in range(self.zdiscr[1]):
+                    #compute the l(x,u) term
+                    current_state = x*self.zdiscr[0] + y
+
+                    q = self.cost(self.stateVect[current_state])
+
+                    logvalue = np.log(u[x, y] / (p[x, y]))
+                    logvalue = np.nan_to_num(np.log(u[x, y] / (p[x, y])), nan=0)
+
+                    dkl = np.sum(u[x,y]*logvalue)
+
+                    l = q + dkl
+                    
+                    #compute the v term
+                    v[x,y] = l + np.sum(u[x,y]*v)
+
+            for x in range(self.zdiscr[0]):
+                for y in range(self.zdiscr[1]):
+                    u[x, y] = (p[x, y]*np.exp(-v))/(np.sum(p[x, y]*np.exp(-v)))
+
+        self.z = np.exp(-self.unravelPF(v))
+
+        #print(self.z)
+
+
     """
     Update the controller's behavior based on the current state.
     
@@ -124,7 +247,6 @@ class ControllerKLC:
                 #print("Step #" + str(i))
                 hist[i]=state #Log the state
                 state = self.loop(state) #Sample the new state
-                print(state)
             fullH[j] = [x[0] for x in hist]
             fullHv[j] = [x[1] for x in hist]
 
@@ -133,22 +255,6 @@ class ControllerKLC:
         for i in range(self.duration):
             meanx[i] = np.mean(fullH[:,i])
             stdsx[i] = np.std(fullH[:,i])
-
-        plt.rcParams.update({'font.size': 18})
-
-        #PLOT X -> Angle
-        x = np.array([x for x in range(self.duration)])
-        y = np.array(meanx)
-        ci = np.array(stdsx)
-
-        fig, ax = plt.subplots()
-        plt.xlim([0, self.duration])
-        ax.plot(x,y)
-        plt.xlabel("Time")
-        plt.ylabel("State")
-        plt.title("Position on x")
-        ax.fill_between(x, (y-ci), (y+ci), color='b', alpha=.1)
-        plt.show()
 
         meany = [0]*self.duration #Get the means and stds for plotting
         stdsy = [0]*self.duration
@@ -164,24 +270,11 @@ class ControllerKLC:
             meanx[i] = np.mean(fullH[:,i])
             stdsx[i] = np.std(fullH[:,i])
 
-        plt.rcParams.update({'font.size': 18})
+        print("result position:")
+        print(meanx[-1])
+        print(meany[-1])
 
-        #PLOT X -> Angle
-        x = np.array([x for x in range(self.duration)])
-        y = np.array(meany)
-        ci = np.array(stdsy)
-
-        fig, ax = plt.subplots()
-        plt.xlim([0, self.duration])
-        ax.plot(x,y)
-        plt.xlabel("Time")
-        plt.ylabel("State")
-        plt.title("Position on y")
-        ax.fill_between(x, (y-ci), (y+ci), color='b', alpha=.1)
-        plt.show()
-
-
-        return [meanx, meany, time]
+        return [meanx, meany, time, stdsx, stdsy]
 
     
     # Utility methods for init and update methods
@@ -222,12 +315,8 @@ class ControllerKLC:
             yterm = ((state[1] - obs[1]) / sy) ** 2
             obsTerm += k * np.exp(-0.5 * (xterm + yterm))
 
-        # Calculate the distance from the goal and introduce a regularization term for 2TypeSimulation
-        distance_to_goal = np.sqrt((state[0] - self.xd) ** 2 + (state[1] - self.yd) ** 2)
-        regularization_term = 0.1 * distance_to_goal  # Adjust the scaling factor as needed
-
         # Include the regularization term in the overall cost calculation 
-        return q1*(state[0] - self.xd) ** 2 + q2*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
+        return q1*(state[0] - self.xd) ** 2 + q2*(state[1] - self.yd) ** 2 + obsTerm
     
     
     """
@@ -257,18 +346,11 @@ class ControllerKLC:
         nrm = np.linalg.norm(vect)
         
         for i in range(self.zsim):
-            prev_vect = vect.copy()  # Salva l'autovettore dell'iterazione precedente
             vect = mat.dot(vect)
             nrm = np.linalg.norm(vect)
             vect = vect / nrm
+            print(nrm)
             
-            """# Calcola la differenza tra l'autovettore attuale e quello precedente
-            diff = np.linalg.norm(vect - prev_vect)
-            
-            # Verifica la condizione di arresto
-            if diff < epsilon:
-                break"""
-
         return vect
 
     
@@ -293,50 +375,16 @@ class ControllerKLC:
     
 
     def export_metrics(self, x, y, time):
-        np.save("klc_linear_results_from_planning", np.array([x, y, time]))
+        np.save("klc_planning_"+ str(self.mode), np.array([x, y, time]))
 
 
-    def value_iteration(self, max_iterations=100, convergence_threshold=1e-6):
-        actions = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1)]
-
-        for _ in range(max_iterations):
-            new_V = np.copy(self.V)
-            max_change = 0  # Keep track of the maximum change in V for convergence check
-
-            for x in range(self.zdiscr[0]):
-                for y in range(self.zdiscr[1]):
-                    current_state_index = x * self.zdiscr[1] + y
-                    min_value = np.inf
-
-                    for action in actions:
-                        next_x, next_y = x + action[0], y + action[1]
-
-                        if 0 <= next_x < self.zdiscr[0] and 0 <= next_y < self.zdiscr[1]:
-                            next_state_index = next_x * self.zdiscr[1] + next_y
-                            transition_prob = self.passive_dynamics[x, y, next_x, next_y]
-                            action_value = transition_prob * self.cost(self.stateVect[next_state_index]) + self.V[next_state_index]
-
-                            min_value = min(min_value, action_value)
-                    
-                    new_V[current_state_index] = min_value
-                    max_change = max(max_change, abs(self.V[current_state_index] - new_V[current_state_index]))
-
-            self.V = new_V
-            
-            if max_change < convergence_threshold:
-                break
-
-        self.z = np.exp(-self.V)
-
-
-"""
 print("Prova del sistema KLC")
 
-klc_controller = ControllerKLC([16, 16], 0)
+klc_controller = ControllerKLC([8, 8], 0)
 print("Prova Dynamic Programming")
 print("FINE DYNAMIC")
 
-x, y, time = klc_controller.update()
+x, y, htime, sx, sy = klc_controller.update()
 print(x[-1])
 print(y[-1])
 
@@ -355,4 +403,4 @@ for obs in klc_controller.obstacles.get_obs():
 plt.tight_layout()
 
 # Mostra i subplot
-plt.show()"""
+plt.show()

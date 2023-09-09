@@ -47,8 +47,8 @@ class linear_model:
         x2_new = max(x2_new, 0)
         
         # Ensure state values are not above 18
-        x1_new = min(x1_new, 18)
-        x2_new = min(x2_new, 18)
+        x1_new = min(x1_new, 9.5)
+        x2_new = min(x2_new, 9.5)
         
         # Update the state for the next step
         self.x = np.array([x1_new, x2_new]) 
@@ -57,20 +57,21 @@ class linear_model:
 
 
 #Generate Simulations for the data driven process
-simulation_with_random = np.zeros((4000, 50, 2))
-a1 = [1, 0]
-a2 = [0, 1]
+simulation_with_random = np.zeros((6000, 50, 2))
+a1 = [1, 0, 0.5]
+a2 = [0, 1, 0.5]
+
 
 # Simulate for two different sets of coefficients
-for index in range(2):
+for index in range(3):
     rover = linear_model(a1[index], a2[index])
     for sim in range(2000):
-        rover.set_x0([random.uniform(0, 17), random.uniform(0, 17)])
+        rover.set_x0([random.uniform(0, 9), random.uniform(0, 9)])
         for iteration in range(50):
             uk = random.uniform(-1, 1)
             xk, yk = rover.make_step(uk)
             simulation_with_random[sim+2000*index, iteration] = np.array([xk, yk])
 
 # Save the generated simulation data to a file
-np.save('data.npy', simulation_with_random)
+np.save('2TypeSimulation.npy', simulation_with_random)
 

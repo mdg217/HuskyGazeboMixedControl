@@ -29,7 +29,8 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSI
   <arg name="y" default="0.0"/>
   <arg name="z" default="0.0"/>
   <arg name="yaw" default="0.0"/>
-
+	
+  <!--<arg name="my_world" default="$(find husky_mpc_datadriven)/worlds/maze_husky_simulation.world"/>-->
   <arg name="my_world" default="$(find husky_mpc_datadriven)/worlds/husky_real_simulation.world"/>
   
   <rosparam file="$(find husky_mpc_datadriven)/yaml/obstacles.yaml" />

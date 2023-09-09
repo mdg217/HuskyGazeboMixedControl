@@ -119,7 +119,7 @@ class ControllerMPC:
         if u[0] <= 0.5 and u[1] <= 0.5:
             self.index+=1
 
-        if abs(states[0]-target[0])<=0.4 and abs(states[1]-target[1])<=0.4:
+        if abs(states[0]-target[0])<=0.3 and abs(states[1]-target[1])<=0.3:
             return states[0], states[1], 1
 
         # Set the linear and angular velocities for the robot's motion
@@ -155,12 +155,12 @@ class ControllerMPC:
         self.mpc.bounds['upper', '_x', 'theta'] = np.pi
 
         # Set lower bounds on inputs
-        self.mpc.bounds['lower', '_u', 'v'] = -1
-        self.mpc.bounds['lower', '_u', 'w'] = -1
+        self.mpc.bounds['lower', '_u', 'v'] = -0.6
+        self.mpc.bounds['lower', '_u', 'w'] = -0.8
 
         # Set upper bounds on inputs
-        self.mpc.bounds['upper', '_u', 'v'] = 1
-        self.mpc.bounds['upper', '_u', 'w'] = 1
+        self.mpc.bounds['upper', '_u', 'v'] = 0.6
+        self.mpc.bounds['upper', '_u', 'w'] = 0.8
 
 
     """

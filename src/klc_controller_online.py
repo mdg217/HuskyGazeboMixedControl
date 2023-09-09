@@ -7,7 +7,7 @@ import rospy
 from Plants.uniform_plant import *
 from Plants.linearized_plant import *
 from Plants.trajectory_based_plant import *
-from time import *
+import time
 from pylab import rcParams
 
 """
@@ -26,6 +26,7 @@ class ControllerKLCOnline:
     def __init__(self, goal, mode):
 
         self.cache = CostCache()
+        self.mode = mode
 
         rospy.init_node('husky', anonymous=True)
 
@@ -55,7 +56,7 @@ class ControllerKLCOnline:
         #Number of iterations for the simulations
         self.zsim = 15
         #Duration of the simulation
-        self.duration = 25
+        self.duration = 30
 
         # Creazione del vettore 4D inizializzato con zeri
 
@@ -109,15 +110,20 @@ class ControllerKLCOnline:
         #Task:  obtain simulations for different initial conditions (say, 5 different initial conditions). For each of these, run 50 simulations.
 
         for j in range(self.zsim): #Perform simulations
+            diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
+            #Compute the execution time
+            start_time = time.time()
             print("simulazione numero: " + str(j))
             hist = [[0,0]]*nSteps
             state = [0, 0] #Initialize the pendulum <------------
-            for i in range(nSteps): #For each step                
+            for i in range(nSteps): #For each step   
+                #diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q             
                 #compute new possible states from statevect using the current state
                 
                 #Verificare prima quali stati sono disponibili a partire da state per andare in state + action nella 
                 #matrice stateVect
                 #compute di index of the next states
+                #devo fare in modo che la scelta dello stato arrivi fino a 4 caselle non ad una sola
                 for action in actions:
                     is_good_state = state + action
                     #print(is_good_state)
@@ -129,6 +135,16 @@ class ControllerKLCOnline:
                                 possible_states.append(state_index)
                                 #print(possible_states)
                             state_index+=1
+                        for action in actions: 
+                            is_good_state = is_good_state + action
+                            if 0 <= is_good_state[0] < self.zdiscr[0]*self.zstep[0] and 0 <= is_good_state[1] < self.zdiscr[1]*self.zstep[1]:
+                                state_index = 0
+                                for s in self.stateVect:
+                                    if s[0] == is_good_state[0] and s[1] == is_good_state[1]:
+                                        #print(s)
+                                        possible_states.append(state_index)
+                                        #print(possible_states)
+                                    state_index+=1
                 
                 for k in possible_states:
                     #print("Il valore del vett in pos " + str(k) + " è: " + str(self.stateVect[k]))
@@ -141,6 +157,12 @@ class ControllerKLCOnline:
 
                 hist[i]=state #Log the state
                 state = self.loop(state) #Sample the new state
+
+            end_time = time.time()
+            elapsed_time = end_time - start_time
+
+            print(f"Tempo di esecuzione: {elapsed_time} secondi")
+            #time.sleep(2)
 
             fullH[j] = [x[0] for x in hist]
             fullHv[j] = [x[1] for x in hist]
@@ -157,15 +179,13 @@ class ControllerKLCOnline:
             meany[i] = np.mean(fullHv[:,i])
             stdsy[i] = np.std(fullHv[:,i])
 
-        time = np.array([time for time in range(self.duration)])
+        htime = np.array([time for time in range(self.duration)])
 
-        meanx = [0]*self.duration #Get the means and stds for plotting
-        stdsx = [0]*self.duration
-        for i in range(self.duration):
-            meanx[i] = np.mean(fullH[:,i])
-            stdsx[i] = np.std(fullH[:,i])
+        print("result position:")
+        print(meanx[-1])
+        print(meany[-1])
 
-        return [meanx, meany, time, stdsx, stdsy]
+        return [meanx, meany, htime, stdsx, stdsy]
 
     
     # Utility methods for init and update methods
@@ -196,7 +216,7 @@ class ControllerKLCOnline:
     :return: The calculated cost.
     """
     def cost(self, state):
-        k = 25
+        k = 45
         sx = 0.7
         sy = 0.7
 
@@ -204,32 +224,35 @@ class ControllerKLCOnline:
 
         #ADD VISION OF THE ROBOT FOR THE OBSTACLES
         for obs in self.obstacles.get_obs():
-            
-            if(self.is_obstacle_in_fov(state[0], state[1], obs[0], obs[1]) == True):
+            if(self.is_obstacle_in_fov(state[0], state[1], obs[0], obs[1], 1) == True):
                 xterm = ((state[0] - obs[0]) / sx) ** 2
                 yterm = ((state[1] - obs[1]) / sy) ** 2
                 obsTerm += k * np.exp(-0.5 * (xterm + yterm))
-
-        # Calculate the distance from the goal and introduce a regularization term for 2TypeSimulation
-        distance_to_goal = np.sqrt((state[0] - self.xd) ** 2 + (state[1] - self.yd) ** 2)
-        regularization_term = 0.1 * distance_to_goal  # Adjust the scaling factor as needed
+        print(obsTerm)
+        print("------------------------------------------------")
 
         # Include the regularization term in the overall cost calculation 
-        return 0.6*(state[0] - self.xd) ** 2 + 0.6*(state[1] - self.yd) ** 2 + obsTerm #+ regularization_term
+        return 0.7*(state[0] - self.xd) ** 2 + 0.7*(state[1] - self.yd) ** 2 + obsTerm 
 
 
-    def is_obstacle_in_fov(self, rover_x, rover_y, obs_x, obs_y):
-        
-        fov_radius = 2.0  # Raggio del campo visivo del rover
-        
+    import numpy as np
+
+    def is_obstacle_in_fov(self, rover_x, rover_y, obs_x, obs_y, obs_radius):
+            
+        fov_radius = 1.5  # Raggio del campo visivo del rover
+            
         # Calcola la distanza tra il rover e l'ostacolo
         distance = np.sqrt((rover_x - obs_x)**2 + (rover_y - obs_y)**2)
         
-        # Verifica se l'ostacolo è all'interno del campo visivo del rover
-        if distance <= fov_radius:
+        # Calcola la somma dei raggi del rover e dell'ostacolo
+        total_radius = fov_radius + obs_radius
+        
+        # Verifica se l'ostacolo è all'interno del campo visivo del rover considerando entrambi i raggi
+        if distance <= total_radius:
             return True  # Ostacolo è nel campo visivo
         else:
             return False  # Ostacolo non è nel campo visivo
+
     
     
     """
@@ -327,4 +350,29 @@ class ControllerKLCOnline:
     
 
     def export_metrics(self, x, y, time):
-        np.save("klc_vision_linear_results_from_planning", np.array([x, y, time]))
+        np.save("klc_online_real_planning_" + str(self.mode), np.array([x, y, time]))
+
+"""klc_controller = ControllerKLCOnline([8, 8], 0)
+print("Prova Dynamic Programming")
+print("FINE DYNAMIC")
+
+x, y, times, sx, sy = klc_controller.update()
+print(x[-1])
+print(y[-1])
+
+# Crea una griglia di subplot con 1 riga e 2 colonne
+fig, axs = plt.subplots(1, 1, figsize=(10, 5))
+
+# Plot del primo subplot
+axs.plot(x, y, marker='o', linestyle='-', color='r')
+axs.set_xlabel('X Position')
+axs.set_ylabel('Y Position')
+axs.set_title('Primo Plot')
+for obs in klc_controller.obstacles.get_obs():
+    axs.scatter(obs[0], obs[1], color='r', s=1000)
+
+# Regola la spaziatura tra i subplot
+plt.tight_layout()
+
+# Mostra i subplot
+plt.show()"""

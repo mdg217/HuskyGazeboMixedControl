@@ -5,7 +5,7 @@ class trajectory_based_plant():
 
     def get_plant(self, dim, uniform):
 
-        trackData = np.load('path_to_the_recorded_data')
+        trackData = np.load('/home/marco/catkin_ws/src/husky_mpc_datadriven/src/data/last_result_for_thesis/dynamic_0/klc_online_simulation_0.npy')
         self.conditional = uniform
 
         print(trackData[0][-1])
@@ -33,7 +33,7 @@ class trajectory_based_plant():
         non_zero_positions = list(zip(*indices))
 
         for index in non_zero_positions:
-            self.conditional[index] = cond[index] + abs(np.random.normal(0, 1))                        
+            self.conditional[index] = cond[index] + abs(np.random.normal(0, 0.05))                        
 
         return self.conditional
 

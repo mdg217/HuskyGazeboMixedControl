@@ -19,7 +19,7 @@ class uniform_plant:
     def get_plant(self, dim):
 
         # Initialize the transition matrix
-        passive_dynamics = np.zeros((dim+1, dim+1, dim+1, dim+1))
+        passive_dynamics = np.zeros((dim, dim, dim, dim))
 
         # Populate transitions for adjacent states
         for row in range(dim):

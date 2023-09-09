@@ -6,12 +6,41 @@ from klc_controller_online import *
 cache = CostCache()
 
 target = [8, 8]
-klc = ControllerKLCOnline(target, 0)
-x, y, time, sx, sy = klc.update()
-#np.save("path_to_do_in_mpc", np.array([x,y]))
+mode = 0
+klc = ControllerKLCOnline(target, mode)
+mx, my, htime, sx, sy = klc.update()
 #np.save("mean_stdv_plot_data", np.array([x, sx, y, sy]))
-klc.export_metrics(x, y, time)
-cache.set_next_target(x, y)
+klc.export_metrics(mx, my, htime)
+cache.set_next_target(mx, my)
+
+plt.rcParams.update({'font.size': 30})
+dur = 30
+
+#PLOT X -> Angle
+x = np.array([x for x in range(dur)])
+y = np.array(mx)
+ci = np.array(sx)   
+fig, ax = plt.subplots()
+plt.xlim([0, dur])
+ax.plot(x,y, label="Planning x")
+plt.xlabel("Time")
+plt.ylabel("State")
+plt.title("Position on x")
+ax.fill_between(x, (y-ci), (y+ci), color='b', alpha=.1)
+plt.savefig('/home/marco/Desktop/klc_dinamica_passiva' + str(mode) + '/xKLC_PM_online_real.png')
+
+#PLOT X -> Angle
+x = np.array([x for x in range(dur)])
+y = np.array(my)
+ci = np.array(sy)
+fig, ax = plt.subplots()
+plt.xlim([0, dur])
+ax.plot(x,y, label="Planning y")
+plt.xlabel("Time")
+plt.ylabel("State")
+plt.title("Position on y")
+ax.fill_between(x, (y-ci), (y+ci), color='b', alpha=.1)
+plt.savefig('/home/marco/Desktop/klc_dinamica_passiva' + str(mode) + '/yKLC_PM_online_real.png')
 
 mpc = ControllerMPC([0,0,0])
 
@@ -29,29 +58,9 @@ while not rospy.is_shutdown():
     if stopping_cond == 1:
         break
 
-print(x[-1])
-print(y[-1])
-
-# Crea una griglia di subplot con 1 riga e 2 colonne
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-
-# Plot del primo subplot
-axs.plot(mpc_x_history, mpc_y_history, marker='o', linestyle='-', color='r')
-axs.set_xlabel('X Position')
-axs.set_ylabel('Y Position')
-axs.set_title('Primo Plot')
-for obs in klc.obstacles.get_obs():
-    axs.scatter(obs[0], obs[1], color='r', s=1000)
-
-# Regola la spaziatura tra i subplot
-plt.tight_layout()
-
-# Mostra i subplot
-plt.show()
-
 print("salvataggio dei risultati nella simulazione!")
-np.save("klc_results_from_real_simulation", np.array([mpc_x_history, mpc_y_history, mpc_t_history]))
+np.save("klc_online_real_simulation_" + str(mode), np.array([mpc_x_history, mpc_y_history, mpc_t_history]))
 
 u1, u2 = mpc.get_inputs()
 
-np.save("inputs_for_husky", np.array([u1, u2]))
+np.save("inputs_for_husky_real_klc_online_"+ str(mode), np.array([u1, u2]))

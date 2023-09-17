@@ -222,7 +222,6 @@ class ControllerKLCOnline:
     :return: The calculated cost.
     """
     def cost(self, state):
-
         k = 30
         sx = 0.7
         sy = 0.7
@@ -230,34 +229,30 @@ class ControllerKLCOnline:
         obsTerm = 0
 
         #ADD VISION OF THE ROBOT FOR THE OBSTACLES
-        for obs in self.world_odom_obstacles:
-            
-            if(self.is_obstacle_in_fov(state[0], state[1], obs[0], obs[1]) == True):
+        for obs in self.obstacles.get_obs():
+            if(self.is_obstacle_in_fov(state[0], state[1], obs[0], obs[1], 1) == True):
                 xterm = ((state[0] - obs[0]) / sx) ** 2
                 yterm = ((state[1] - obs[1]) / sy) ** 2
                 obsTerm += k * np.exp(-0.5 * (xterm + yterm))
 
-        # Calculate the distance from the goal and introduce a regularization term for 2TypeSimulation
-        distance_to_goal = np.sqrt((state[0] - self.xd) ** 2 + (state[1] - self.yd) ** 2)
-        regularization_term = 0.1 * distance_to_goal  # Adjust the scaling factor as needed
-
-        # Include the regularization term in the overall cost calculation 
-        return 0.6*(state[0] - self.xd) ** 2 + 0.6*(state[1] - self.yd) ** 2 + obsTerm + regularization_term
+        return 0.7*(state[0] - self.xd) ** 2 + 0.7*(state[1] - self.yd) ** 2 + obsTerm 
 
 
-    def is_obstacle_in_fov(self, rover_x, rover_y, obs_x, obs_y):
-        
-        fov_radius = 2.0  # Raggio del campo visivo del rover
-        
-        # Calcola la distanza tra il rover e l'ostacolo
+    def is_obstacle_in_fov(self, rover_x, rover_y, obs_x, obs_y, obs_radius):
+            
+        fov_radius = 1.5  # Radius of the rover's field of view
+            
+        # Calculate the distance between the rover and the obstacle
         distance = np.sqrt((rover_x - obs_x)**2 + (rover_y - obs_y)**2)
         
-        # Verifica se l'ostacolo è all'interno del campo visivo del rover
-        if distance <= fov_radius:
-            return True  # Ostacolo è nel campo visivo
+        # Calculate the sum of the rover's radius and the obstacle's radius
+        total_radius = fov_radius + obs_radius
+        
+        # Check if the obstacle is within the rover's field of view considering both radii
+        if distance <= total_radius:
+            return True  # Obstacle is in the field of view
         else:
-            return False  # Ostacolo non è nel campo visivo
-    
+            return False  # Obstacle is not in the field of view
     
     """
     Unravel a 2D passive dynamics array into a 1D array.
@@ -323,28 +318,3 @@ class ControllerKLCOnline:
 
     def export_metrics(self, x, y, time):
         np.save("klc_vision_linear_results_from_planning", np.array([x, y, time]))
-
-
-"""print("Prova del sistema KLC")
-
-klc_controller = ControllerKLCOnline([16, 16], 0)
-x, y, time = klc_controller.update()
-print(x[-1])
-print(y[-1])
-
-# Crea una griglia di subplot con 1 riga e 2 colonne
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-
-# Plot del primo subplot
-axs.plot(x, y, marker='o', linestyle='-', color='r')
-axs.set_xlabel('X Position')
-axs.set_ylabel('Y Position')
-axs.set_title('Primo Plot')
-for obs in klc_controller.obstacles.get_obs():
-    axs.scatter(obs[0], obs[1], color='r', s=1000)
-
-# Regola la spaziatura tra i subplot
-plt.tight_layout()
-
-# Mostra i subplot
-plt.show()"""

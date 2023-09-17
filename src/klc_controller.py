@@ -102,7 +102,7 @@ class ControllerKLC:
         
 
         # Plot heatmap of the cost
-        plt.figure(figsize=(10, 10))
+        """plt.figure(figsize=(10, 10))
         plt.imshow(heatmap, cmap='viridis', interpolation='nearest', origin='lower')
         plt.colorbar(label='State cost')
         
@@ -110,7 +110,7 @@ class ControllerKLC:
         plt.xlabel('x', fontsize=20)
         plt.ylabel('y', fontsize=20)
         plt.show()
-
+"""
 
         self.Prob = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2))
 
@@ -138,7 +138,7 @@ class ControllerKLC:
         
 
         # Heatmap desiderability function
-        plt.figure(figsize=(12, 12))
+        """plt.figure(figsize=(12, 12))
         plt.imshow(zmpheat, cmap='viridis', interpolation='nearest', origin='lower')
         plt.colorbar(label='Desiderability value')
         
@@ -146,7 +146,7 @@ class ControllerKLC:
         plt.xlabel('x', fontsize=20)
         plt.ylabel('y', fontsize=20)
         plt.show()
-
+"""
 
 
         print(f"Execution time: {elapsed_time} s")
@@ -168,14 +168,14 @@ class ControllerKLC:
         
 
         # heatmap plot
-        plt.figure(figsize=(12, 12))
+        """plt.figure(figsize=(12, 12))
         plt.imshow(zdpheat, cmap='viridis', interpolation='nearest', origin='lower')
         plt.colorbar(label='Desiderability value')
         
         plt.title('Desiderability function heatmap with dynamic programming', fontsize=20)
         plt.xlabel('x', fontsize=20)
         plt.ylabel('y', fontsize=20)
-        plt.show()
+        plt.show()"""
 
     
 

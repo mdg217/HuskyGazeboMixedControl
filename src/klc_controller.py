@@ -8,6 +8,7 @@ import time
 from Plants.uniform_plant import *
 from Plants.linearized_plant import *
 from Plants.trajectory_based_plant import *
+plt.rcParams.update({'font.size': 20})
 
 """
 ControllerKLC: A class implementing a Kinematic Linearization Controller (KLC) for robot motion planning.
@@ -57,7 +58,6 @@ class ControllerKLC:
         #Duration of the simulation
         self.duration = 30
 
-        # Creazione del vettore 4D inizializzato con zeri
 
         self.passive_dynamics = np.zeros((self.zdiscr[0], self.zdiscr[0], self.zdiscr[0], self.zdiscr[0]))
 
@@ -101,12 +101,11 @@ class ControllerKLC:
                 heatmap[j, i] = self.cost(state)
         
 
-        # Crea il plot della heatmap
-        plt.figure(figsize=(10, 8))
+        # Plot heatmap of the cost
+        plt.figure(figsize=(10, 10))
         plt.imshow(heatmap, cmap='viridis', interpolation='nearest', origin='lower')
         plt.colorbar(label='State cost')
         
-        # Imposta la dimensione dei caratteri per il titolo, l'etichetta x e l'etichetta y
         plt.title('State cost heatmap', fontsize=20)
         plt.xlabel('x', fontsize=20)
         plt.ylabel('y', fontsize=20)
@@ -138,20 +137,19 @@ class ControllerKLC:
                 zmpheat[j, i] = zmp[i*self.zdiscr[0] + j]
         
 
-        # Crea il plot della heatmap
-        plt.figure(figsize=(10, 8))
+        # Heatmap desiderability function
+        plt.figure(figsize=(12, 12))
         plt.imshow(zmpheat, cmap='viridis', interpolation='nearest', origin='lower')
-        plt.colorbar(label='State cost')
+        plt.colorbar(label='Desiderability value')
         
-        # Imposta la dimensione dei caratteri per il titolo, l'etichetta x e l'etichetta y
-        plt.title('State cost heatmap', fontsize=20)
+        plt.title('Desiderability function heatmap with Power Method', fontsize=20)
         plt.xlabel('x', fontsize=20)
         plt.ylabel('y', fontsize=20)
         plt.show()
 
 
 
-        print(f"Tempo di esecuzione: {elapsed_time} secondi")
+        print(f"Execution time: {elapsed_time} s")
         
         #Compute the execution time
         start_time = time.time()
@@ -159,7 +157,7 @@ class ControllerKLC:
         end_time = time.time()
         elapsed_time = end_time - start_time
 
-        print(f"Tempo di esecuzione: {elapsed_time} secondi")
+        print(f"Execution time: {elapsed_time} s")
 
         zdpheat = np.zeros((self.zdiscr[0], self.zdiscr[1]))
         
@@ -169,13 +167,12 @@ class ControllerKLC:
                 zdpheat[j, i] = self.z[i*self.zdiscr[0] + j]
         
 
-        # Crea il plot della heatmap
-        plt.figure(figsize=(10, 8))
+        # heatmap plot
+        plt.figure(figsize=(12, 12))
         plt.imshow(zdpheat, cmap='viridis', interpolation='nearest', origin='lower')
-        plt.colorbar(label='State cost')
+        plt.colorbar(label='Desiderability value')
         
-        # Imposta la dimensione dei caratteri per il titolo, l'etichetta x e l'etichetta y
-        plt.title('State cost heatmap', fontsize=20)
+        plt.title('Desiderability function heatmap with dynamic programming', fontsize=20)
         plt.xlabel('x', fontsize=20)
         plt.ylabel('y', fontsize=20)
         plt.show()
@@ -183,48 +180,49 @@ class ControllerKLC:
     
 
     """
-    set initial guess u=p (probably passive dynamics)
-    set initial guess v
-    repeat while not converged:
-    for each state s:
-        p(s'|s) (transition probabilities from s)
-        u(s'|s) (transition probs from s)
-        calculate the inside of brackets in (1) = l(s,u) + E_u(s'|s)[v(s')]
-        find unext(s'|s) = min_u (what is above)
-    """
-    def dynamic_programming(self, max_iterations=100):
+	Dynamic Programming Algorithm
+	    
+	:param max_iterations: Maximum number of iterations for the algorithm (default is 100).
+	:param convergence_threshold: Threshold for convergence (default is 1e-6).
+	:return: None
+	"""
+    def dynamic_programming(self, max_iterations=100, convergence_threshold=1e-6):
         u = self.passive_dynamics
         p = self.passive_dynamics
         v = np.zeros((self.zdiscr[0], self.zdiscr[1]))
 
-        for _ in range(max_iterations):
-            #new_V = np.copy(self.V)
+        for iteration in range(max_iterations):
+            prev_v = np.copy(v)  # Make a copy of the previous v
 
             for x in range(self.zdiscr[0]):
-                last_v = v
                 for y in range(self.zdiscr[1]):
-                    #compute the l(x,u) term
-                    current_state = x*self.zdiscr[0] + y
+                    # compute the l(x,u) term
+                    current_state = x * self.zdiscr[0] + y
 
                     q = self.cost(self.stateVect[current_state])
 
-                    logvalue = np.log(u[x, y] / (p[x, y]))
                     logvalue = np.nan_to_num(np.log(u[x, y] / (p[x, y])), nan=0)
 
-                    dkl = np.sum(u[x,y]*logvalue)
+                    dkl = np.sum(u[x, y] * logvalue)
 
                     l = q + dkl
-                    
-                    #compute the v term
-                    v[x,y] = l + np.sum(u[x,y]*v)
+
+                    # compute the v term
+                    v[x, y] = l + np.sum(u[x, y] * v)
 
             for x in range(self.zdiscr[0]):
                 for y in range(self.zdiscr[1]):
-                    u[x, y] = (p[x, y]*np.exp(-v))/(np.sum(p[x, y]*np.exp(-v)))
+                    u[x, y] = (p[x, y] * np.exp(-v)) / (np.sum(p[x, y] * np.exp(-v)))
+
+            # Calculate the change in v
+            delta_v = np.max(np.abs(prev_v - v))
+
+            if delta_v < convergence_threshold:
+                print(f"Converged after {iteration + 1} iterations.")
+                break
 
         self.z = np.exp(-self.unravelPF(v))
 
-        #print(self.z)
 
 
     """
@@ -238,11 +236,9 @@ class ControllerKLC:
         fullHv = np.zeros((self.zsim,self.duration))
         nSteps = self.duration
 
-        #Task:  obtain simulations for different initial conditions (say, 5 different initial conditions). For each of these, run 50 simulations.
-
-        for j in range(self.zsim): #Perform 50 simulations
+        for j in range(self.zsim): #Perform zsim simulations
             hist = [[0,0]]*nSteps
-            state = [0, 0] #Initialize the pendulum <------------
+            state = [0, 0] #Initialize the rover state 
             for i in range(nSteps): #For each step
                 #print("Step #" + str(i))
                 hist[i]=state #Log the state
@@ -269,10 +265,6 @@ class ControllerKLC:
         for i in range(self.duration):
             meanx[i] = np.mean(fullH[:,i])
             stdsx[i] = np.std(fullH[:,i])
-
-        print("result position:")
-        print(meanx[-1])
-        print(meany[-1])
 
         return [meanx, meany, time, stdsx, stdsy]
 
@@ -315,7 +307,7 @@ class ControllerKLC:
             yterm = ((state[1] - obs[1]) / sy) ** 2
             obsTerm += k * np.exp(-0.5 * (xterm + yterm))
 
-        # Include the regularization term in the overall cost calculation 
+
         return q1*(state[0] - self.xd) ** 2 + q2*(state[1] - self.yd) ** 2 + obsTerm
     
     
@@ -377,30 +369,3 @@ class ControllerKLC:
     def export_metrics(self, x, y, time):
         np.save("klc_planning_"+ str(self.mode), np.array([x, y, time]))
 
-
-print("Prova del sistema KLC")
-
-klc_controller = ControllerKLC([8, 8], 0)
-print("Prova Dynamic Programming")
-print("FINE DYNAMIC")
-
-x, y, htime, sx, sy = klc_controller.update()
-print(x[-1])
-print(y[-1])
-
-# Crea una griglia di subplot con 1 riga e 2 colonne
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-
-# Plot del primo subplot
-axs.plot(x, y, marker='o', linestyle='-', color='r')
-axs.set_xlabel('X Position')
-axs.set_ylabel('Y Position')
-axs.set_title('Primo Plot')
-for obs in klc_controller.obstacles.get_obs():
-    axs.scatter(obs[0], obs[1], color='r', s=1000)
-
-# Regola la spaziatura tra i subplot
-plt.tight_layout()
-
-# Mostra i subplot
-plt.show()

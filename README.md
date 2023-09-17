@@ -11,6 +11,5 @@
 6. sudo apt install python3-wstool\
 7. sudo apt install ros-$ROS_DISTRO-moveit\
 8. sudo apt install ros-$ROS_DISTRO-rqt-controller-manager\
-9. ros-$ROS_DISTRO-rqt-joint-trajectory-controller\
-10. ros-$ROS_DISTRO-rqt-multiplot\
+
 

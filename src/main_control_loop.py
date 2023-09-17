@@ -16,7 +16,7 @@ cache.set_next_target(mx, my)
 plt.rcParams.update({'font.size': 30})
 dur = 30
 
-#PLOT X -> Angle
+#PLOT X
 x = np.array([x for x in range(dur)])
 y = np.array(mx)
 ci = np.array(sx)   
@@ -29,7 +29,7 @@ plt.title("Position on x")
 ax.fill_between(x, (y-ci), (y+ci), color='b', alpha=.1)
 plt.savefig('/home/marco/Desktop/klc_dinamica_passiva' + str(mode) + '/xKLC_PM_online_real.png')
 
-#PLOT X -> Angle
+#PLOT Y
 x = np.array([x for x in range(dur)])
 y = np.array(my)
 ci = np.array(sy)
@@ -58,7 +58,7 @@ while not rospy.is_shutdown():
     if stopping_cond == 1:
         break
 
-print("salvataggio dei risultati nella simulazione!")
+print("saving simulation results!")
 np.save("klc_online_real_simulation_" + str(mode), np.array([mpc_x_history, mpc_y_history, mpc_t_history]))
 
 u1, u2 = mpc.get_inputs()

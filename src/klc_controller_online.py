@@ -107,23 +107,17 @@ class ControllerKLCOnline:
         actions = 0.5*np.array([(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1)])
         possible_states = []
 
-        #Task:  obtain simulations for different initial conditions (say, 5 different initial conditions). For each of these, run 50 simulations.
-
         for j in range(self.zsim): #Perform simulations
             diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q
             #Compute the execution time
             start_time = time.time()
             print("simulazione numero: " + str(j))
             hist = [[0,0]]*nSteps
-            state = [0, 0] #Initialize the pendulum <------------
+            state = [0, 0] #Initialize the rover
             for i in range(nSteps): #For each step   
                 #diagMinusQ = np.zeros((self.zdiscr[0]**2, self.zdiscr[0]**2)) # q             
                 #compute new possible states from statevect using the current state
-                
-                #Verificare prima quali stati sono disponibili a partire da state per andare in state + action nella 
-                #matrice stateVect
                 #compute di index of the next states
-                #devo fare in modo che la scelta dello stato arrivi fino a 4 caselle non ad una sola
                 for action in actions:
                     is_good_state = state + action
                     #print(is_good_state)
@@ -141,14 +135,10 @@ class ControllerKLCOnline:
                                 state_index = 0
                                 for s in self.stateVect:
                                     if s[0] == is_good_state[0] and s[1] == is_good_state[1]:
-                                        #print(s)
                                         possible_states.append(state_index)
-                                        #print(possible_states)
                                     state_index+=1
                 
                 for k in possible_states:
-                    #print("Il valore del vett in pos " + str(k) + " è: " + str(self.stateVect[k]))
-                    #Build the diagonal matrix with the exponential of the opposite of the cost
                     diagMinusQ[k,k] = np.exp(-self.cost(self.stateVect[k]))
 
                 self.z = self.power_method(diagMinusQ@self.Prob, self.zdiscr[0]**2)
@@ -216,7 +206,7 @@ class ControllerKLCOnline:
     :return: The calculated cost.
     """
     def cost(self, state):
-        k = 45
+        k = 30
         sx = 0.7
         sy = 0.7
 
@@ -231,27 +221,26 @@ class ControllerKLCOnline:
         print(obsTerm)
         print("------------------------------------------------")
 
-        # Include the regularization term in the overall cost calculation 
+
         return 0.7*(state[0] - self.xd) ** 2 + 0.7*(state[1] - self.yd) ** 2 + obsTerm 
 
 
-    import numpy as np
 
     def is_obstacle_in_fov(self, rover_x, rover_y, obs_x, obs_y, obs_radius):
             
-        fov_radius = 1.5  # Raggio del campo visivo del rover
+        fov_radius = 1.5  # Radius of the rover's field of view
             
-        # Calcola la distanza tra il rover e l'ostacolo
+        # Calculate the distance between the rover and the obstacle
         distance = np.sqrt((rover_x - obs_x)**2 + (rover_y - obs_y)**2)
         
-        # Calcola la somma dei raggi del rover e dell'ostacolo
+        # Calculate the sum of the rover's radius and the obstacle's radius
         total_radius = fov_radius + obs_radius
         
-        # Verifica se l'ostacolo è all'interno del campo visivo del rover considerando entrambi i raggi
+        # Check if the obstacle is within the rover's field of view considering both radii
         if distance <= total_radius:
-            return True  # Ostacolo è nel campo visivo
+            return True  # Obstacle is in the field of view
         else:
-            return False  # Ostacolo non è nel campo visivo
+            return False  # Obstacle is not in the field of view
 
     
     
@@ -282,7 +271,7 @@ class ControllerKLCOnline:
         nrm = np.linalg.norm(vect)
         
         for i in range(self.zsim):
-            prev_vect = vect.copy()  # Salva l'autovettore dell'iterazione precedente
+            #prev_vect = vect.copy() 
             vect = mat.dot(vect)
             nrm = np.linalg.norm(vect)
             vect = vect / nrm
@@ -316,63 +305,9 @@ class ControllerKLCOnline:
         newState = self.stateVect[ind] #Get the new state from the state vector
         return(newState)
     
-    def dynamic_programming(self, max_iterations=100, convergence_threshold=1e-6):
-        actions = [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, 1), (1, -1), (-1, -1)]
 
-        for _ in range(max_iterations):
-            new_V = np.copy(self.V)
-            max_change = 0  # Keep track of the maximum change in V for convergence check
-
-            for x in range(self.zdiscr[0]):
-                for y in range(self.zdiscr[1]):
-                    current_state_index = x * self.zdiscr[1] + y
-                    min_value = np.inf
-
-                    for action in actions:
-                        next_x, next_y = x + action[0], y + action[1]
-
-                        if 0 <= next_x < self.zdiscr[0] and 0 <= next_y < self.zdiscr[1]:
-                            next_state_index = next_x * self.zdiscr[1] + next_y
-                            transition_prob = self.passive_dynamics[x, y, next_x, next_y]
-                            action_value = transition_prob * self.cost(self.stateVect[next_state_index]) + self.V[next_state_index]
-
-                            min_value = min(min_value, action_value)
-                    
-                    new_V[current_state_index] = min_value
-                    max_change = max(max_change, abs(self.V[current_state_index] - new_V[current_state_index]))
-
-            self.V = new_V
-            
-            if max_change < convergence_threshold:
-                break
-
-        self.z = np.exp(-self.V)
-    
+	
 
     def export_metrics(self, x, y, time):
         np.save("klc_online_real_planning_" + str(self.mode), np.array([x, y, time]))
 
-"""klc_controller = ControllerKLCOnline([8, 8], 0)
-print("Prova Dynamic Programming")
-print("FINE DYNAMIC")
-
-x, y, times, sx, sy = klc_controller.update()
-print(x[-1])
-print(y[-1])
-
-# Crea una griglia di subplot con 1 riga e 2 colonne
-fig, axs = plt.subplots(1, 1, figsize=(10, 5))
-
-# Plot del primo subplot
-axs.plot(x, y, marker='o', linestyle='-', color='r')
-axs.set_xlabel('X Position')
-axs.set_ylabel('Y Position')
-axs.set_title('Primo Plot')
-for obs in klc_controller.obstacles.get_obs():
-    axs.scatter(obs[0], obs[1], color='r', s=1000)
-
-# Regola la spaziatura tra i subplot
-plt.tight_layout()
-
-# Mostra i subplot
-plt.show()"""

@@ -8,6 +8,14 @@ import numpy as np
 from gazebo_msgs.srv import GetLinkState 
 import geometry_msgs.msg
 
+
+"""
+Get Link States from Gazebo
+    
+:param link_name: Name of the link to query.
+:param reference_frame: Reference frame for the link.
+:return: Link state information.
+"""
 def get_link_states(link_name, reference_frame):
     rospy.wait_for_service('/gazebo/get_link_state')
     try:
@@ -17,6 +25,12 @@ def get_link_states(link_name, reference_frame):
     except rospy.ServiceException as e:
         print("Service call failed: %s"%e)
 
+
+"""
+Get Position Transform in Odom Frame
+    
+:return: Transform representing the position in the odom frame.
+"""
 def get_position():
     T_odom_world = get_link_states('husky::base_link', 'world') #its the same as T_baselink_world
     TOW = t.concatenate_matrices(t.translation_matrix([T_odom_world.link_state.pose.position.x, T_odom_world.link_state.pose.position.y, T_odom_world.link_state.pose.position.z]),
@@ -24,6 +38,13 @@ def get_position():
     
     return TOW
 
+
+"""
+Get Actual Position Relative to Initial Position
+    
+:param init_position: Initial position transform.
+:return: Transform representing the actual position relative to the initial position.
+"""
 def get_actual_position(init_position):
 
     actual_position = get_position()
@@ -35,6 +56,15 @@ def get_actual_position(init_position):
 
     return [trans[0], trans[1], trans[2], roll, pitch, yaw]
 
+
+
+"""
+Get Obstacle Position in Odom Frame Relative to Initial Position
+    
+:param init_position: Initial position transform.
+:param obs_position_world: Obstacle position in the world frame.
+:return: Transform representing the obstacle position in the odom frame relative to the initial position.
+"""
 def get_obstacle_position_odom(init_position, obs_position_world):
 
     obs_pos = t.concatenate_matrices(t.translation_matrix([obs_position_world[0], obs_position_world[1], obs_position_world[2]]),
@@ -48,6 +78,14 @@ def get_obstacle_position_odom(init_position, obs_position_world):
     return [trans[0], trans[1], trans[2], roll, pitch, yaw]
 
 
+
+"""
+Publish Transform Information
+    
+:param translation: Translation values.
+:param rot: Rotation values.
+:return: None
+"""
 def publish_tf(translation, rot):
     br = tf2_ros.TransformBroadcaster()
 
@@ -70,6 +108,12 @@ def publish_tf(translation, rot):
     br.sendTransform(t) 
 
 
+"""
+Add Noise to States
+    
+:param states: List of states [x, y, theta].
+:return: List of states with added noise.
+"""
 def add_noise_to_states(states):
     noise_xy = 0*np.random.normal(0,1,1)
     noise_theta = 0*np.random.normal(0,1,1)
@@ -77,5 +121,14 @@ def add_noise_to_states(states):
     return [states[0] + noise_xy, states[1] + noise_xy, states[2] + noise_theta]
 
 
+
+"""
+Print States
+    
+:param x: X-coordinate.
+:param y: Y-coordinate.
+:param z: Theta (angle).
+:return: None
+"""
 def print_states(x, y, z):
     print("(x = " + str(x) + ", y = " + str(y) + ", theta = " + str(z) + ")")
